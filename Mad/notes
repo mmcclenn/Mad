@@ -1,0 +1,52 @@
+
+
+Things to do:
+
+first complete run							DONE 2010-11-16
+
+necessary functionality
+-----------------------
+
+1) object initializers							DONE 2010-11-21
+2) keyword: define							DONE 2010-11-21
+3) dot-fields and method calls						DONE 2010-11-21
+4) flow specifications with tags					DONE 2010-11-22
+5) additional standard objects: RunningAverage				DONE 2010-11-22
+6) fix inheritance of classes defined in Perl				DONE 2010-11-30
+7) additional standard objects: ExtLookup				working
+8) object classes defined in Mad					DONE 2011-01-24
+9) array and set variables						working
+10) implicit and explicit dimensionalization				DONE 2011-04-??
+11) allow for time-step other than 1
+12) operator overloading
+
+efficiency and correctness
+--------------------------
+
+1) initial pass over parse tree for declarations, before mad2perl	DONE 2010-11-20
+2) multiple backends for code generation				DONE 2011-01-24
+3) unit checking							DONE 2011-01-25
+4) type checking							DONE 2011-02-14
+5) enforce lvalue constraints						DONE 2011-02-14
+6) interpolation of variables in strings				DONE 2011-01-24
+7) check for variables that are used before being set
+
+better coding
+-------------
+
+1) add error routines to Mad::Model					DONE 2010-11-20
+2) relocate error count to Mad::Model from Mad::Parser			DONE 2010-11-20
+3) eliminate TypeTab							DONE 2010-11-21
+4) simplify variable tables in class Mad::Model				working
+
+
+optimization
+------------
+
+1) multiple backends							DONE 2011-01-24
+2) compile to C++							working
+2.1) implement scalars							
+2.2) implement sets							
+2.3) implement arrays							
+2.4) implement lists							
+2.5) implement primitive type conversions				

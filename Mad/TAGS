@@ -1,0 +1,812 @@
+
+Aux.pm,1163
+package Mad::Parser;6,132
+sub declare_vars Mad::Parser::declare_vars18,310
+sub declare_dynamic_vars Mad::Parser::declare_dynamic_vars42,888
+sub declare_class Mad::Parser::declare_class62,1168
+sub declare_method Mad::Parser::declare_method74,1460
+sub new_dimension Mad::Parser::new_dimension93,1837
+sub new_node Mad::Parser::new_node122,2531
+sub new_anode Mad::Parser::new_anode138,3058
+sub new_fnode Mad::Parser::new_fnode157,3531
+sub new_snode Mad::Parser::new_snode174,3961
+sub add_child Mad::Parser::add_child236,5320
+sub first_child Mad::Parser::first_child251,5597
+sub children Mad::Parser::children263,5801
+sub add_attr Mad::Parser::add_attr273,5978
+sub add_units Mad::Parser::add_units288,6365
+sub finish_units Mad::Parser::finish_units318,7140
+sub take_units Mad::Parser::take_units339,7560
+sub fix_units Mad::Parser::fix_units369,8364
+sub annotate_node Mad::Parser::annotate_node393,8841
+sub markup_vardecl Mad::Parser::markup_vardecl409,9226
+sub markup_var_node Mad::Parser::markup_var_node444,10117
+sub dimension_var_node Mad::Parser::dimension_var_node495,11551
+sub printout Mad::Parser::printout508,11762
+
+Context.pm,840
+package Mad::Symtab;11,169
+sub new Mad::Symtab::new22,271
+sub define Mad::Symtab::define35,429
+sub remove Mad::Symtab::remove54,656
+sub has_sym Mad::Symtab::has_sym66,814
+package Mad::Context;75,933
+sub new Mad::Context::new90,1338
+sub define Mad::Context::define143,2635
+sub remove Mad::Context::remove155,2803
+sub has_sym Mad::Context::has_sym169,3120
+sub lookup Mad::Context::lookup190,3607
+sub syntax_error Mad::Context::syntax_error215,4168
+sub evaluate Mad::Context::evaluate228,4415
+sub check_types Mad::Context::check_types242,4691
+sub generate_init_expr Mad::Context::generate_init_expr255,4907
+sub check_units Mad::Context::check_units268,5132
+sub transform_type Mad::Context::transform_type282,5394
+sub dimensionalize Mad::Context::dimensionalize297,5706
+sub model Mad::Context::model311,5949
+
+Gen_code.pm,93
+package Mad::Model;12,182
+sub generate_object_code Mad::Model::generate_object_code35,745
+
+Gen_perl.pm,1446
+package Mad::Model;12,218
+sub generate_code_perl Mad::Model::generate_code_perl33,668
+sub generate_perl Mad::Model::generate_perl152,4574
+sub generate_function_perl Mad::Model::generate_function_perl703,21990
+sub generate_init_function_perl Mad::Model::generate_init_function_perl800,25233
+sub generate_expr_perl Mad::Model::generate_expr_perl838,26534
+sub generate_var_expr_perl Mad::Model::generate_var_expr_perl1247,40763
+sub generate_index_expr_perl Mad::Model::generate_index_expr_perl1621,50911
+sub generate_init_expr_perl Mad::Model::generate_init_expr_perl1662,51780
+sub tr_type_perl Mad::Model::tr_type_perl1678,52151
+sub dimension_perl Mad::Model::dimension_perl1779,54648
+sub write_bnop_perl Mad::Model::write_bnop_perl1828,55870
+sub write_blop_perl Mad::Model::write_blop_perl1907,57725
+sub write_msop_perl Mad::Model::write_msop_perl1964,59041
+sub write_relop_perl Mad::Model::write_relop_perl2008,60062
+sub check_dims_perl Mad::Model::check_dims_perl2044,61220
+sub close_dims_perl Mad::Model::close_dims_perl2174,64709
+sub generate_rate_expr_perl Mad::Model::generate_rate_expr_perl2203,65419
+sub generate_flow_perl Mad::Model::generate_flow_perl2331,69780
+sub generate_step_perl Mad::Model::generate_step_perl2382,71346
+sub generate_trace_perl Mad::Model::generate_trace_perl2405,72221
+sub annotate_perl Mad::Model::annotate_perl2456,73666
+sub load_perl Mad::Model::load_perl2469,73956
+
+Model.pm,1912
+package Mad::Model;16,485
+sub new Mad::Model::new60,1338
+sub DESTROY Mad::Model::DESTROY159,3901
+sub load_mad Mad::Model::load_mad175,4348
+sub syntax_error Mad::Model::syntax_error216,5479
+my %DECL_ERROR_TRANS DECL_ERROR_TRANS231,5736
+sub decl_error Mad::Model::decl_error245,6135
+sub unit_error Mad::Model::unit_error265,6730
+sub unit_warning Mad::Model::unit_warning278,6996
+sub general_error Mad::Model::general_error291,7278
+sub error_count Mad::Model::error_count304,7472
+sub see_package Mad::Model::see_package315,7586
+sub define_static Mad::Model::define_static329,7898
+sub lookup_static Mad::Model::lookup_static355,8681
+sub define_dimension Mad::Model::define_dimension377,9115
+sub lookup_dimension Mad::Model::lookup_dimension401,9774
+sub merge_dimlist Mad::Model::merge_dimlist421,10147
+sub has_type Mad::Model::has_type455,10897
+sub has_method Mad::Model::has_method495,11741
+sub build_type Mad::Model::build_type511,12130
+sub declare_static_vars Mad::Model::declare_static_vars544,13072
+sub declare_dims Mad::Model::declare_dims611,14872
+sub declare_class Mad::Model::declare_class690,16827
+sub declare_method Mad::Model::declare_method841,21089
+sub declare_function Mad::Model::declare_function919,23169
+sub plist_signature Mad::Model::plist_signature985,25023
+sub print_tree Mad::Model::print_tree1025,25912
+sub generate_code Mad::Model::generate_code1037,26149
+sub add_lines Mad::Model::add_lines1099,27933
+sub annotate Mad::Model::annotate1118,28404
+sub check_types_assign Mad::Model::check_types_assign1142,28972
+sub check_var Mad::Model::check_var1210,30826
+sub var_type Mad::Model::var_type1273,32376
+sub node_attributes Mad::Model::node_attributes1309,33140
+sub print_code Mad::Model::print_code1327,33450
+sub see_dimension Mad::Model::see_dimension1355,34245
+sub setup_functions Mad::Model::setup_functions1407,35243
+
+Runtime.pm,496
+package Mad::Runtime;16,485
+sub run Mad::Runtime::run26,658
+sub error Mad::Runtime::error58,1209
+sub initial_value Mad::Runtime::initial_value71,1438
+sub initialize Mad::Runtime::initialize89,1747
+sub run_until Mad::Runtime::run_until109,2172
+sub variables Mad::Runtime::variables154,3224
+sub dump_trace Mad::Runtime::dump_trace179,3627
+sub get_values Mad::Runtime::get_values211,4212
+sub minmax_values Mad::Runtime::minmax_values224,4445
+sub plot Mad::Runtime::plot243,4696
+
+Simulator.pm,1242
+package NBGC::Simulator;51,1634
+sub new NBGC::Simulator::new71,2072
+sub DESTROY NBGC::Simulator::DESTROY117,3646
+sub load NBGC::Simulator::load126,3761
+sub reset NBGC::Simulator::reset152,4495
+sub compile_runprog NBGC::Simulator::compile_runprog165,4778
+sub compile_node NBGC::Simulator::compile_node231,6401
+sub variables NBGC::Simulator::variables268,7181
+sub compile_traceprog NBGC::Simulator::compile_traceprog280,7471
+sub init_runspace NBGC::Simulator::init_runspace321,8582
+package $self->{runspace};334,8823
+sub set_value $self->{runspace}::set_value361,9474
+sub init $self->{runspace}::init388,10081
+sub trace $self->{runspace}::trace419,10651
+sub clear_trace $self->{runspace}::clear_trace446,11224
+sub run $self->{runspace}::run464,11779
+sub init_run_time $self->{runspace}::init_run_time547,13636
+sub increment_run_time $self->{runspace}::increment_run_time562,13951
+sub init_trace $self->{runspace}::init_trace574,14202
+sub trace_vars $self->{runspace}::trace_vars585,14377
+sub dump_trace $self->{runspace}::dump_trace595,14523
+sub get_values $self->{runspace}::get_values617,14982
+sub minmax_values $self->{runspace}::minmax_values639,15371
+sub plot $self->{runspace}::plot658,15667
+
+Standard.pm,6910
+package Mad::Gen::Scalar;88,3507
+sub _declare_code Mad::Gen::Scalar::_declare_code96,3736
+sub _declare_code_perl Mad::Gen::Scalar::_declare_code_perl121,4369
+sub _declare_code_cc Mad::Gen::Scalar::_declare_code_cc137,4804
+sub _init_code Mad::Gen::Scalar::_init_code152,5259
+sub _init_code_perl Mad::Gen::Scalar::_init_code_perl209,6930
+sub _init_code_cc Mad::Gen::Scalar::_init_code_cc220,7189
+sub _set_code Mad::Gen::Scalar::_set_code250,8076
+sub _set_code_perl Mad::Gen::Scalar::_set_code_perl322,10210
+sub _set_code_cc Mad::Gen::Scalar::_set_code_cc346,10752
+sub _value_code Mad::Gen::Scalar::_value_code372,11354
+sub _value_code_perl Mad::Gen::Scalar::_value_code_perl403,12126
+sub _value_code_cc Mad::Gen::Scalar::_value_code_cc412,12315
+sub _has_value Mad::Gen::Scalar::_has_value425,12600
+sub _metcall_code Mad::Gen::Scalar::_metcall_code433,12707
+package Mad::Gen::List;452,13249
+sub _declare_code Mad::Gen::List::_declare_code457,13338
+sub _declare_code_perl Mad::Gen::List::_declare_code_perl479,13872
+sub _init_code Mad::Gen::List::_init_code489,14095
+sub _init_code_perl Mad::Gen::List::_init_code_perl538,15388
+sub _set_code Mad::Gen::List::_set_code552,15773
+sub _set_code_perl Mad::Gen::List::_set_code_perl605,17215
+sub _value_code Mad::Gen::List::_value_code653,18469
+sub _value_code_perl Mad::Gen::List::_value_code_perl686,19270
+sub _has_value Mad::Gen::List::_has_value710,19694
+sub _metcall_code Mad::Gen::List::_metcall_code720,19910
+sub _metcall_code_perl Mad::Gen::List::_metcall_code_perl770,21172
+package Mad::Gen::Set;791,21758
+sub _declare_code Mad::Gen::Set::_declare_code796,21845
+sub _declare_code_perl Mad::Gen::Set::_declare_code_perl818,22379
+sub _init_code Mad::Gen::Set::_init_code828,22625
+sub _init_code_perl Mad::Gen::Set::_init_code_perl876,23916
+sub _set_code Mad::Gen::Set::_set_code892,24376
+sub _set_code_perl Mad::Gen::Set::_set_code_perl944,25753
+sub _value_code Mad::Gen::Set::_value_code980,26803
+sub _value_code_perl Mad::Gen::Set::_value_code_perl1013,27654
+sub _has_value Mad::Gen::Set::_has_value1032,28016
+sub _metcall_code Mad::Gen::Set::_metcall_code1042,28231
+sub _metcall_code_perl Mad::Gen::Set::_metcall_code_perl1092,29483
+package Mad::Gen::MadClass;1112,30037
+sub _declare_code Mad::Gen::MadClass::_declare_code1118,30178
+sub _declare_code_perl Mad::Gen::MadClass::_declare_code_perl1140,30692
+sub _init_code Mad::Gen::MadClass::_init_code1150,30903
+sub _init_code_perl Mad::Gen::MadClass::_init_code_perl1188,31773
+sub _set_code Mad::Gen::MadClass::_set_code1201,32087
+sub _set_code_perl Mad::Gen::MadClass::_set_code_perl1256,33765
+sub _value_code Mad::Gen::MadClass::_value_code1288,34603
+sub _value_code_perl Mad::Gen::MadClass::_value_code_perl1334,35969
+sub _has_value Mad::Gen::MadClass::_has_value1345,36215
+sub _metcall_code Mad::Gen::MadClass::_metcall_code1353,36286
+sub _metcall_code_perl Mad::Gen::MadClass::_metcall_code_perl1423,38177
+package Mad::Gen::ExtClass;1441,38622
+sub _attrs Mad::Gen::ExtClass::_attrs1448,38836
+sub _methods Mad::Gen::ExtClass::_methods1452,38871
+sub _declare_code Mad::Gen::ExtClass::_declare_code1458,38981
+sub _declare_code_perl Mad::Gen::ExtClass::_declare_code_perl1489,39869
+sub _init_code Mad::Gen::ExtClass::_init_code1503,40195
+sub _init_code_perl Mad::Gen::ExtClass::_init_code_perl1622,43358
+sub _init_code_cc Mad::Gen::ExtClass::_init_code_cc1631,43583
+sub _set_code Mad::Gen::ExtClass::_set_code1643,43936
+sub _set_code_perl Mad::Gen::ExtClass::_set_code_perl1705,45887
+sub _set_code_cc Mad::Gen::ExtClass::_set_code_cc1725,46297
+sub _value_code Mad::Gen::ExtClass::_value_code1736,46653
+sub _value_code_perl Mad::Gen::ExtClass::_value_code_perl1778,47835
+sub _value_code_cc Mad::Gen::ExtClass::_value_code_cc1785,47978
+sub _has_value Mad::Gen::ExtClass::_has_value1795,48256
+sub _metcall_code Mad::Gen::ExtClass::_metcall_code1806,48474
+sub _metcall_code_perl Mad::Gen::ExtClass::_metcall_code_perl1874,50362
+sub _metcall_code_cc Mad::Gen::ExtClass::_metcall_code_cc1882,50545
+package Mad::Gen::BaseValue;1905,51298
+my $attr_hash attr_hash1910,51444
+my $init_list init_list1916,51619
+sub _attrs Mad::Gen::BaseValue::_attrs1918,51647
+my $met_hash met_hash1922,51698
+sub _methods Mad::Gen::BaseValue::_methods1925,51791
+sub _prop_rate_code Mad::Gen::BaseValue::_prop_rate_code1933,51920
+sub _prop_rate_perl Mad::Gen::BaseValue::_prop_rate_perl1968,52869
+sub _preflow_code Mad::Gen::BaseValue::_preflow_code1993,53688
+sub _bounds_code Mad::Gen::BaseValue::_bounds_code2002,53960
+sub _flow_code Mad::Gen::BaseValue::_flow_code2010,54146
+sub _flow_code_perl Mad::Gen::BaseValue::_flow_code_perl2059,55147
+sub _postflow_code Mad::Gen::BaseValue::_postflow_code2070,55465
+package Mad::Gen::Pool;2087,56044
+my $attr_hash attr_hash2090,56117
+my $init_list init_list2096,56292
+sub _attrs Mad::Gen::Pool::_attrs2098,56320
+my $met_hash met_hash2102,56371
+sub _methods Mad::Gen::Pool::_methods2105,56464
+sub _set_code_perl Mad::Gen::Pool::_set_code_perl2114,56745
+sub _set_code_cc Mad::Gen::Pool::_set_code_cc2135,57223
+sub _bounds_code Mad::Gen::Pool::_bounds_code2146,57546
+sub _bounds_code_perl Mad::Gen::Pool::_bounds_code_perl2171,58192
+sub _bounds_code_cc Mad::Gen::Pool::_bounds_code_cc2223,59514
+package Mad::Gen::Reservoir;2243,60204
+my $attr_hash attr_hash2246,60287
+my $init_list init_list2262,60699
+sub _attrs Mad::Gen::Reservoir::_attrs2264,60755
+my $met_hash met_hash2268,60806
+sub _methods Mad::Gen::Reservoir::_methods2273,60945
+sub _set_code_perl Mad::Gen::Reservoir::_set_code_perl2278,60986
+package Mad::Gen::PseudoVar;2302,61774
+sub _declare_code Mad::Gen::PseudoVar::_declare_code2307,61876
+sub _declare_code_perl Mad::Gen::PseudoVar::_declare_code_perl2329,62489
+sub _init_code Mad::Gen::PseudoVar::_init_code2340,62740
+sub _init_code_perl Mad::Gen::PseudoVar::_init_code_perl2365,63394
+sub _value_code Mad::Gen::PseudoVar::_value_code2376,63637
+sub _value_code_perl Mad::Gen::PseudoVar::_value_code_perl2402,64348
+sub _value_code_cc Mad::Gen::PseudoVar::_value_code_cc2409,64474
+sub _set_code Mad::Gen::PseudoVar::_set_code2418,64644
+sub _prop_rate_code Mad::Gen::PseudoVar::_prop_rate_code2426,64826
+sub _preflow_code Mad::Gen::PseudoVar::_preflow_code2435,65024
+sub _bounds_code Mad::Gen::PseudoVar::_bounds_code2440,65063
+sub _flow_code Mad::Gen::PseudoVar::_flow_code2445,65098
+sub _postflow_code Mad::Gen::PseudoVar::_postflow_code2476,65695
+sub new Mad::Gen::PseudoVar::new2486,65909
+package Mad::Gen::Flow;2504,66214
+sub _declare_code Mad::Gen::Flow::_declare_code2509,66276
+sub _declare_code_perl Mad::Gen::Flow::_declare_code_perl2531,66775
+sub _value_code Mad::Gen::Flow::_value_code2544,67073
+sub _set_code Mad::Gen::Flow::_set_code2549,67096
+
+StandardRuntime.pm,388
+package Mad::Gen::Scalar;19,381
+sub new Mad::Gen::Scalar::new21,408
+package Mad::Gen::List;59,1043
+sub new Mad::Gen::List::new61,1068
+package Mad::Gen::Set;139,2382
+sub new Mad::Gen::Set::new141,2406
+sub assign_list Mad::Gen::Set::assign_list250,4256
+sub contains Mad::Gen::Set::contains266,4498
+package Mad::Gen::ExtClass;274,4589
+sub new Mad::Gen::ExtClass::new276,4618
+
+Units.pm,847
+package Mad::Model;22,930
+sub setup_units Mad::Model::setup_units65,2061
+sub declare_unit Mad::Model::declare_unit89,2578
+sub has_unit Mad::Model::has_unit132,3538
+sub equiv_units Mad::Model::equiv_units155,3931
+sub check_units Mad::Model::check_units181,4640
+sub print_units Mad::Model::print_units201,5093
+sub check_units_compare Mad::Model::check_units_compare243,5886
+sub check_units_assign Mad::Model::check_units_assign297,7515
+sub check_node_units Mad::Model::check_node_units367,9308
+sub merge_units Mad::Model::merge_units391,10073
+sub merge_units_internal Mad::Model::merge_units_internal416,10621
+sub add_units Mad::Model::add_units570,14620
+sub subtract_units Mad::Model::subtract_units606,15538
+sub scale_units Mad::Model::scale_units646,16577
+sub merge_list_units Mad::Model::merge_list_units675,17246
+
+Parser.eyp,2186
+use Mad::Model;3,4
+use Mad::Aux;4,20
+progstart:progstart39,508
+			{ $_[$_46,611
+			{ #$DB::single $DB::single68,1031
+			{ my $t 143,2359
+			  my $n 144,2406
+			  $n;148,2584
+			{ my $t 151,2659
+			  my $n 153,2728
+			  $n;157,2906
+			  my $t 164,3074
+			  my $n 165,3121
+			  $n;169,3303
+			  my $t 176,3490
+			  my $n 178,3559
+			  $n;182,3741
+			  $vl;195,3956
+			  $vl;201,4097
+			  my $n 205,4187
+			  $n;208,4306
+			  my $n 214,4496
+			  $n;217,4615
+			  $vl;223,4764
+			  my $n 236,5082
+			  my $n 243,5352
+			{ $_[$_379,7770
+			    $_[0]->new_node('ELSE', $q)423,8450
+			  $_[0]->new_node('FOREACH', $i, $e, $q)445,9012
+			  $_[0]->new_node('FOR', $e1, $e2, $e3, $q)451,9198
+			    $q;540,11013
+			{ $p;556,11198
+			{ $p;559,11238
+			{ $_[$_634,12566
+			{ $_[$_644,12700
+			{ $_[$_691,13422
+			    my $n 788,15624
+			{ $s;838,16449
+			{ $w;848,16629
+			{ $_[0]->new_node('SUBSCRIPT', $_[$_855,16717
+			    $_[0]->new_node('FLOW_1', $so, $sn, $coeff)947,18806
+			    $_[0]->new_node('FLOW_1', $so, $sn, $coeff)953,18978
+			    $_[0]->new_node('FLOW_0', $so, $sn, $coeff)960,19200
+			    $_[0]->new_node('FLOW_0', $so, $sn, $coeff)966,19371
+			    $_[0]->new_node('FLOW', $so, $sn, $rate)1144,24680
+			    my $tag 1150,24840
+			    $_[0]->new_node('FLOW', $so, $sn, $tag)1151,24886
+			    my $tag 1157,25059
+			    $_[0]->new_node('FLOW', $so, $sn, $rate, $tag)1158,25105
+			    $_[0]->new_node('FLOW', $so, $sn, $rate)1164,25273
+			    my $tag 1170,25432
+			    $_[0]->new_node('FLOW', $so, $sn, $tag)1171,25478
+			    my $tag 1177,25650
+			    $_[0]->new_node('FLOW', $so, $sn, $rate, $tag)1178,25696
+			    $_[0]->new_node('FLOW', $so, $sn, $rate)1185,25909
+			    my $tag 1192,26113
+			    $_[0]->new_node('FLOW', $so, $sn, $tag)1193,26159
+			    my $tag 1200,26376
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate)1201,26422
+			    $_[0]->new_node('FLOW', $so, $sn, $rate)1208,26634
+			    my $tag 1215,26837
+			    $_[0]->new_node('FLOW', $so, $sn, $tag)1216,26883
+			    my $tag 1223,27099
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate)1224,27145
+	|	unitspec1236,27301
+use Carp;1258,27675
+
+Parser.pm,85
+package Mad::Parser;12,517
+sub unexpendedInput Mad::Parser::unexpendedInput29,902
+
+Parser.eyp,9937
+my $warnmessage warnmessage37,
+sub new Mad::Parser::new41,
+sub {Mad::Parser::{8257,
+my $q q36,
+sub {Mad::Parser::{45,
+sub {Mad::Parser::{48,
+sub {Mad::Parser::{51,
+sub {Mad::Parser::{54,
+sub {Mad::Parser::{57,
+sub {Mad::Parser::{60,
+sub {Mad::Parser::{63,
+sub {Mad::Parser::{66,
+sub {Mad::Parser::{69,
+sub {Mad::Parser::{72,
+my $l l70,
+sub {Mad::Parser::{77,
+sub {Mad::Parser::{81,
+sub {Mad::Parser::{84,
+sub {Mad::Parser::{88,
+sub {Mad::Parser::{92,
+sub {Mad::Parser::{95,
+sub {Mad::Parser::{98,
+sub {Mad::Parser::{101,
+my $w w100,
+sub {Mad::Parser::{109,
+my $w w107,
+sub {Mad::Parser::{116,
+my $w w115,
+sub {Mad::Parser::{125,
+my $w w123,
+sub {Mad::Parser::{128,
+my $w w126,
+sub {Mad::Parser::{131,
+my $w w133,
+sub {Mad::Parser::{141,
+my $w w130,
+sub {Mad::Parser::{135,
+sub {Mad::Parser::{145,
+sub {Mad::Parser::{148,
+sub {Mad::Parser::{151,
+sub {Mad::Parser::{154,
+my $u u153,
+sub {Mad::Parser::{163,
+my $w w161,
+sub {Mad::Parser::{172,
+my $u u173,
+sub {Mad::Parser::{184,
+my $u u170,
+sub {Mad::Parser::{175,
+my $w w185,
+sub {Mad::Parser::{197,
+my $w w182,
+sub {Mad::Parser::{191,
+sub {Mad::Parser::{203,
+my $p p207,
+sub {Mad::Parser::{216,
+my $p p202,
+sub {Mad::Parser::{210,
+my $p p219,
+sub {Mad::Parser::{227,
+my $p p215,
+sub {Mad::Parser::{222,
+my $p p232,
+sub {Mad::Parser::{240,
+my $p p226,
+sub {Mad::Parser::{235,
+my $p p243,
+sub {Mad::Parser::{250,
+my $p p238,
+sub {Mad::Parser::{250,
+sub {Mad::Parser::{258,
+sub {Mad::Parser::{262,
+sub {Mad::Parser::{265,
+sub {Mad::Parser::{268,
+sub {Mad::Parser::{271,
+sub {Mad::Parser::{278,
+sub {Mad::Parser::{280,
+sub {Mad::Parser::{283,
+sub {Mad::Parser::{286,
+sub {Mad::Parser::{289,
+sub {Mad::Parser::{292,
+my $w w291,
+sub {Mad::Parser::{296,
+my $k k295,
+sub {Mad::Parser::{303,
+my $k k301,
+sub {Mad::Parser::{309,
+my $u u307,
+sub {Mad::Parser::{316,
+my $e e314,
+sub {Mad::Parser::{325,
+my $vl vl324,
+sub {Mad::Parser::{332,
+my $w w352,
+sub {Mad::Parser::{360,
+my $w w358,
+sub {Mad::Parser::{366,
+my $v v365,
+sub {Mad::Parser::{370,
+my $vl vl368,
+sub {Mad::Parser::{373,
+my $u u372,
+sub {Mad::Parser::{377,
+my $e e375,
+sub {Mad::Parser::{382,
+my $p p380,
+sub {Mad::Parser::{386,
+my $e e384,
+sub {Mad::Parser::{392,
+my $v v391,
+sub {Mad::Parser::{396,
+my $d d394,
+sub {Mad::Parser::{399,
+sub {Mad::Parser::{403,
+my $l l401,
+sub {Mad::Parser::{406,
+my $l l404,
+sub {Mad::Parser::{409,
+my $e e412,
+sub {Mad::Parser::{417,
+my $e e408,
+sub {Mad::Parser::{413,
+my $e e410,
+sub {Mad::Parser::{415,
+sub {Mad::Parser::{421,
+sub {Mad::Parser::{427,
+my $q q426,
+sub {Mad::Parser::{434,
+sub {Mad::Parser::{429,
+my $e e436,
+sub {Mad::Parser::{441,
+my $e e432,
+sub {Mad::Parser::{437,
+my $e e434,
+sub {Mad::Parser::{439,
+my $e e442,
+sub {Mad::Parser::{448,
+my $e e440,
+sub {Mad::Parser::{445,
+my $e e448,
+sub {Mad::Parser::{455,
+my $e e446,
+sub {Mad::Parser::{451,
+my $e2 e2455,
+sub {Mad::Parser::{461,
+my $e2 e2453,
+sub {Mad::Parser::{458,
+my $e e460,
+sub {Mad::Parser::{465,
+sub {Mad::Parser::{468,
+my $e e466,
+sub {Mad::Parser::{471,
+sub {Mad::Parser::{474,
+sub {Mad::Parser::{477,
+sub {Mad::Parser::{480,
+my $e e478,
+sub {Mad::Parser::{483,
+my $e e481,
+sub {Mad::Parser::{486,
+sub {Mad::Parser::{489,
+sub {Mad::Parser::{493,
+sub {Mad::Parser::{496,
+sub {Mad::Parser::{499,
+sub {Mad::Parser::{502,
+sub {Mad::Parser::{505,
+my $q q509,
+sub {Mad::Parser::{517,
+my $dl dl504,
+sub {Mad::Parser::{512,
+my $q q520,
+sub {Mad::Parser::{528,
+sub {Mad::Parser::{523,
+my $q q532,
+sub {Mad::Parser::{540,
+sub {Mad::Parser::{535,
+my $q q543,
+sub {Mad::Parser::{551,
+sub {Mad::Parser::{546,
+sub {Mad::Parser::{557,
+sub {Mad::Parser::{562,
+my $p p561,
+sub {Mad::Parser::{566,
+my $p p564,
+sub {Mad::Parser::{569,
+sub {Mad::Parser::{572,
+my $q q571,
+sub {Mad::Parser::{576,
+my $p p574,
+sub {Mad::Parser::{579,
+my $l l578,
+sub {Mad::Parser::{583,
+my $l l581,
+sub {Mad::Parser::{586,
+my $l l584,
+sub {Mad::Parser::{589,
+sub {Mad::Parser::{592,
+sub {Mad::Parser::{595,
+sub {Mad::Parser::{599,
+sub {Mad::Parser::{602,
+my $p p601,
+sub {Mad::Parser::{606,
+my $l l604,
+sub {Mad::Parser::{609,
+my $u u608,
+sub {Mad::Parser::{616,
+my $u u614,
+sub {Mad::Parser::{622,
+my $u u620,
+sub {Mad::Parser::{632,
+sub {Mad::Parser::{638,
+sub {Mad::Parser::{640,
+sub {Mad::Parser::{644,
+my $a a642,
+sub {Mad::Parser::{647,
+my $t t645,
+sub {Mad::Parser::{650,
+sub {Mad::Parser::{654,
+my $a a652,
+sub {Mad::Parser::{658,
+my $t t656,
+sub {Mad::Parser::{661,
+sub {Mad::Parser::{665,
+sub {Mad::Parser::{668,
+sub {Mad::Parser::{671,
+my $c c669,
+sub {Mad::Parser::{674,
+sub {Mad::Parser::{677,
+sub {Mad::Parser::{680,
+my $i i678,
+sub {Mad::Parser::{683,
+my $i i681,
+sub {Mad::Parser::{686,
+sub {Mad::Parser::{689,
+sub {Mad::Parser::{692,
+sub {Mad::Parser::{695,
+sub {Mad::Parser::{698,
+sub {Mad::Parser::{701,
+my $u u699,
+sub {Mad::Parser::{704,
+sub {Mad::Parser::{707,
+my $l l706,
+sub {Mad::Parser::{712,
+my $l l710,
+sub {Mad::Parser::{716,
+my $l l714,
+sub {Mad::Parser::{720,
+my $l l718,
+sub {Mad::Parser::{723,
+my $l l721,
+sub {Mad::Parser::{726,
+my $l l724,
+sub {Mad::Parser::{729,
+my $l l727,
+sub {Mad::Parser::{732,
+my $l l730,
+sub {Mad::Parser::{738,
+my $l l736,
+sub {Mad::Parser::{741,
+my $l l739,
+sub {Mad::Parser::{744,
+my $l l742,
+sub {Mad::Parser::{747,
+my $l l745,
+sub {Mad::Parser::{750,
+my $l l748,
+sub {Mad::Parser::{753,
+my $l l751,
+sub {Mad::Parser::{756,
+my $t t757,
+sub {Mad::Parser::{762,
+my $t t760,
+sub {Mad::Parser::{765,
+sub {Mad::Parser::{769,
+sub {Mad::Parser::{772,
+my $v v771,
+sub {Mad::Parser::{778,
+my $v v776,
+sub {Mad::Parser::{785,
+my $v v783,
+sub {Mad::Parser::{791,
+my $a a790,
+sub {Mad::Parser::{801,
+sub {Mad::Parser::{805,
+sub {Mad::Parser::{808,
+sub {Mad::Parser::{811,
+sub {Mad::Parser::{814,
+my $v v813,
+sub {Mad::Parser::{818,
+sub {Mad::Parser::{822,
+sub {Mad::Parser::{826,
+sub {Mad::Parser::{829,
+sub {Mad::Parser::{833,
+sub {Mad::Parser::{837,
+my $d d836,
+sub {Mad::Parser::{841,
+my $l l839,
+sub {Mad::Parser::{844,
+my $s s843,
+sub {Mad::Parser::{848,
+my $e e846,
+sub {Mad::Parser::{851,
+my $a a849,
+sub {Mad::Parser::{854,
+my $w w853,
+sub {Mad::Parser::{858,
+sub {Mad::Parser::{862,
+sub {Mad::Parser::{865,
+my $a a864,
+sub {Mad::Parser::{869,
+my $value value892,
+sub {Mad::Parser::{897,
+my $s s896,
+sub {Mad::Parser::{901,
+my $p p899,
+sub {Mad::Parser::{904,
+my $so so907,
+sub {Mad::Parser::{915,
+my $so so913,
+sub {Mad::Parser::{921,
+my $so so921,
+sub {Mad::Parser::{930,
+my $so so928,
+sub {Mad::Parser::{936,
+my $so so934,
+sub {Mad::Parser::{943,
+my $so so941,
+sub {Mad::Parser::{949,
+my $so so949,
+sub {Mad::Parser::{958,
+my $so so956,
+sub {Mad::Parser::{964,
+my $so so962,
+sub {Mad::Parser::{971,
+my $so so969,
+sub {Mad::Parser::{977,
+my $rate rate977,
+sub {Mad::Parser::{985,
+my $w w983,
+sub {Mad::Parser::{992,
+my $rate rate990,
+sub {Mad::Parser::{999,
+my $so so997,
+sub {Mad::Parser::{1005,
+my $so so1003,
+sub {Mad::Parser::{1012,
+my $so so1010,
+sub {Mad::Parser::{1019,
+my $rate rate1017,
+sub {Mad::Parser::{1025,
+my $w w1023,
+sub {Mad::Parser::{1032,
+my $rate rate1030,
+sub {Mad::Parser::{1039,
+my $so so1037,
+sub {Mad::Parser::{1045,
+my $so so1043,
+sub {Mad::Parser::{1052,
+my $so so1050,
+sub {Mad::Parser::{1059,
+my $rate rate1059,
+sub {Mad::Parser::{1067,
+my $w w1065,
+sub {Mad::Parser::{1074,
+my $rate rate1072,
+sub {Mad::Parser::{1081,
+my $so so1079,
+sub {Mad::Parser::{1087,
+my $so so1085,
+sub {Mad::Parser::{1094,
+my $so so1092,
+sub {Mad::Parser::{1101,
+my $rate rate1099,
+sub {Mad::Parser::{1108,
+my $w w1106,
+sub {Mad::Parser::{1116,
+my $rate rate1114,
+sub {Mad::Parser::{1124,
+my $so so1122,
+sub {Mad::Parser::{1131,
+my $so so1129,
+sub {Mad::Parser::{1139,
+my $so so1137,
+sub {Mad::Parser::{1147,
+my $rate rate1147,
+sub {Mad::Parser::{1155,
+my $w w1153,
+sub {Mad::Parser::{1162,
+my $rate rate1160,
+sub {Mad::Parser::{1169,
+my $rate rate1167,
+sub {Mad::Parser::{1175,
+my $w w1173,
+sub {Mad::Parser::{1182,
+my $rate rate1180,
+sub {Mad::Parser::{1189,
+my $rate rate1187,
+sub {Mad::Parser::{1196,
+my $w w1194,
+sub {Mad::Parser::{1204,
+my $rate rate1202,
+sub {Mad::Parser::{1212,
+my $rate rate1210,
+sub {Mad::Parser::{1219,
+my $w w1217,
+sub {Mad::Parser::{1227,
+my $rate rate1225,
+sub {Mad::Parser::{1235,
+my $f f1234,
+sub {Mad::Parser::{1245,
+sub {Mad::Parser::{1247,
+my $ulist ulist1246,
+sub {Mad::Parser::{1252,
+sub {Mad::Parser::{1255,
+sub {Mad::Parser::{1259,
+sub init Mad::Parser::init1274,
+sub parse_input Mad::Parser::parse_input1294,
+sub parse_include Mad::Parser::parse_include1341,
+sub pop_input Mad::Parser::pop_input1390,
+sub set_package Mad::Parser::set_package1422,
+sub push_frame Mad::Parser::push_frame1438,
+sub pop_frame Mad::Parser::pop_frame1475,
+sub frame_attr Mad::Parser::frame_attr1499,
+sub use_perl Mad::Parser::use_perl1512,
+sub check_type Mad::Parser::check_type1534,
+sub declare_unit Mad::Parser::declare_unit1548,
+sub validate_unitspec Mad::Parser::validate_unitspec1564,
+sub lex_mode Mad::Parser::lex_mode1617,
+sub count_brace Mad::Parser::count_brace1636,
+sub syntax_error Mad::Parser::syntax_error1652,
+sub gen_error Mad::Parser::gen_error1686,
+sub my_warning Mad::Parser::my_warning1694,
+sub my_lexer Mad::Parser::my_lexer1711,
+sub my_lex_wrapper Mad::Parser::my_lex_wrapper1939,

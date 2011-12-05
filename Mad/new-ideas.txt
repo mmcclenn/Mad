@@ -1,0 +1,140 @@
+
+var $a[%base] : int;
+
+%base.extend($new);
+
+$a.b[$i].c = 4
+
+$a.b.add($new_index);
+
+$a = 5
+
+push @queue, 3
+
+push $a[$index].@queue, 3
+
+
+var foo <m> = 5;
+
+var foo <m> : int = 5;
+
+var foo <m> : int;
+
+my $map[@keys] = @values;
+$state.queue.last_element().name
+
+
+
+generate_expr_perl
+	BNOP
+		merge_units($node, $u1, $u2, $str)
+	RELOP
+		compare_units($node, $u1, $u2);
+	SCALARV
+		check_units($node, $u1, $u2, $str)
+	FUNCALL
+		param_units($node, $u, $u, $pnum)
+
+
+SET: =  +=  *=  etc.
+GET: 
+BIND :=
+REF &
+
+$a
+    SET: $a->{value} =
+    GET: $a->{value}
+    BIND: $a =
+    REF: $a
+
+$a.b (internal)
+    SET: $a->{b}->{value} = or $a->set_b(
+    GET: $a->{b}->{value} or $a->get_b(
+    BIND: $a->{b} = or $a->bind_b(
+    REF: $a->{b} or $a->ref_b(
+
+$a.b (external)
+    SET: $a->{b} = or $a->set_b()
+    GET: $a->{b} or $a->get_b()
+    BIND: ---
+    REF: ---
+
+$a.m(i) (internal)
+    SET: --- or maybe $a->set_m(i,
+    GET: $a->m(i)
+    BIND: ---
+    REF: ---
+
+$a.m(i) (external)
+    SET: ---
+    GET: $a->m(i)
+    BIND: ---
+    REF: ---
+
+@a
+    SET: @{$a} =
+    GET: @{$a}
+    BIND: $a =
+    REF: $a
+
+@a.elt(i)
+    SET: $a->[i] = or $a->[i]->{value}
+    GET: $a->[i] or $a->[i]->{value}
+    BIND: --- or $a->[i] = 
+    REF: --- or $a->[i]
+
+%a
+    SET: $a->set_value()
+    GET: @{$a->{order}}
+    BIND: $a =
+    REF: $a
+
+%a.elt(i)
+    SET: $a->set_elt(i,
+    GET: $a->{order}[i]
+    BIND: ---
+    REF: ---
+
+
+$a = $c
+	$a->{value} = $c->{value}	(SET)
+
+$a
+	$a->{value}
+
+$a.b = $c
+    if $a.b is an attribute of an internal class...
+        $a->{b}->{value} = $c->{value}	(SET)
+	$a->set_b($c->{value})
+    if $a.b is an attribute of an external class...
+        $a->{b} = $c->{value}		(SET)
+        $a->set_b($c->{value})
+
+$a.b
+    if $a.b is an attribute of an internal class...
+        $a->{b}->{value}	(GET)
+	$a->get_b()
+    if $a.b is an attribute of an external class...
+        $a->{b}			(GET)
+        $a->get_b();
+
+$a := $c
+        $a = $c			(REF)
+
+$a.b := $c
+    if $a.b is an attribute of an internal class...
+	$a->{b} = $c;		(REF)
+	$a->bind_b($c);
+    if $a.b is an attribute of an external class...
+	can't do it
+
+$a.b (for &)
+    if $a.b is an attribute of an internal class...
+	$a->{b}			(REF)
+	$a->ref_b()
+    if $a.b is an attribute of an external class...
+	can't do it
+
+so we either ask for: 
+  REF - address if want to bind to or be bound or pass by reference
+  GET - value

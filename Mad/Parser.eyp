@@ -1,0 +1,2113 @@
+
+%{
+use Mad::Model;
+use Mad::Aux;
+
+%}
+
+%nonassoc PREC_LOW
+%left OROP XOROP
+%left ANDOP
+%right NOTOP
+%left ','
+%right ASSIGNOP '='
+%right '?' ':'
+%nonassoc DOTDOT
+%left OROR DORDOR
+%left ANDAND
+%nonassoc RELOP
+%left MINMAX
+%left ADDOP
+%left MULOP
+%left CONCAT
+# %left MATCHOP
+%right NOT2 UMINUS
+%right POWOP
+%nonassoc INCOP # Perl grammar uses PREINC PREDEC POSTINC POSTDEC
+%nonassoc ')'
+%left '('
+%left '[' '{'
+%nonassoc '<'
+%nonassoc FLOWLEFT FLOWRIGHT
+
+%%
+
+program	:	progstart progseq.q
+			{ $q; }
+	;
+
+progstart:	/* null */
+	;
+
+progseq :	/* null */
+			{ $_[0]->new_node('PROGSEQ'); }
+	
+	|	progseq ';'
+			{ $_[1]; }
+	
+	|	progseq tl_include
+			{ add_child($_[1], $_[2]); }
+	
+	|	progseq tl_decl
+			{ add_child($_[1], $_[2]); }
+	
+	|	progseq tl_across
+			{ add_child($_[1], $_[2]); }
+		
+	|	progseq tl_block
+			{ add_child($_[1], $_[2]); }
+		
+	|	progseq line
+			{ add_child($_[1], $_[2]); }
+	
+	|	progseq flow ';'
+			{ add_child($_[1], $_[2]); }
+	
+	|	progseq label.l flow.f ';'
+			{ $f->{attr} = $l;
+			  add_child($_[1], $_[3]); }
+	;
+
+tl_include :	include progseq EOF
+			{ add_child($_[2], $_[0]->new_node('EOF'));
+			  add_attr($_[2], 'INCLUDE'); }
+	;
+
+tl_decl	:	use
+			{ $_[1]; }
+	
+	|	unit
+			{ undef; }
+	
+	|	struct
+			{ $_[1]; }
+	
+	|	function.f
+			{ $_[0]->{declare_funct}($_[0]->{model},
+						 $f, 
+						 $_[0]->{cf}{package}); }
+       	;
+
+include	:	INCLUDE WORD.w ';'
+			{
+ 			    $_[0]->push_frame(tag => 'INCLUDE');
+			    $_[0]->parse_include($w . ".mad");
+			    $_[0]->pop_frame('INCLUDE');
+			}
+	
+	|	INCLUDE string.w ';'
+			{
+ 			    $_[0]->push_frame(tag => 'INCLUDE');
+			    $_[0]->parse_include($w);
+			    $_[0]->pop_frame('INCLUDE');
+			}
+	;
+
+use	:	USE WORD.w ';'
+			{ $_[0]->use_perl($w . ".pm");
+			  $_[0]->new_anode('USE', "Mad::Object::$w"); }
+	;
+
+unit	:	UNIT unitdecl ';'
+	;
+
+unitdecl:	WORD.w
+			{ $_[0]->declare_unit($w); }
+
+	|	unitdecl ',' WORD.w
+			{ $_[0]->declare_unit($w); }
+	;
+
+struct	:	STRUCT.c WORD.w '{' 
+			{ my $n = $_[0]->new_anode('DUMMY', $w);
+			  my $r = $_[0]->{declare_struct}($_[0]->{model},
+							  $n, $_[0]->{cf}{package});
+			  $_[0]->push_frame(tag => 'STRUCT', struct => $r); }
+		
+		struct_seq.q '}'
+			{ $_[0]->pop_frame('STRUCT');
+			  add_attr($q, $w, $_[0]->{cf}{package}); }
+	;
+
+struct_seq :	/* null */
+			{ $_[0]->new_node('STRUCT'); }
+	
+	|	struct_seq.q function.f
+			{ $_[0]->{declare_member}($_[0]->{model},
+						  $f, $_[0]->{cf}{struct});
+			  add_child($q, $f); }
+	
+	|	struct_seq.q decl_line.d ';'
+			{ $_[0]->{declare_member}($_[0]->{model},
+						  $d, $_[0]->{cf}{struct});
+			  add_child($q, $d); }
+	;
+
+function :	function_head.h ';'
+			{ $h }
+	
+	|	function_head.h '{'
+			{ $_[0]->push_frame(tag => 'FUNCTION', name => $h); }
+		
+		stmtseq.q '}'
+ 			{ $_[0]->pop_frame('FUNCTION');
+			  add_child($h, $q); }
+	;
+
+function_head :	WORD.w refopt.r fname.f '(' params.p ')' unitopt.u
+			{ my $t = $_[0]->new_anode('TYPE', $w);
+			  $t->{ref} = 1 if $r;
+			  my $n = $_[0]->new_anode('FUNCTION', $f, $t, $p);
+			  $_[0]->take_units($n, $u); }
+	
+	|	funopt fname.f '(' params.p ')' ':' WORD.w refopt.r unitopt.u
+			{ my $t = $_[0]->new_anode('TYPE', $w);
+			  $t->{ref} = 1 if $r;
+			  my $n = $_[0]->new_anode('FUNCTION', $f, $t, $p);
+			  $_[0]->take_units($n, $u); }
+	
+	|	funopt fname.f '(' params.p ')'
+			{ my $t = $_[0]->new_anode('TYPE', 'void');
+			  $_[0]->new_anode('FUNCTION', $f, $t, $p); }
+	;
+
+fname	:	FUNC.f
+			{ $f }
+	
+	|	INIT
+			{ 'init' }
+	;
+
+decl_line :	VAR.k vdlist.vl
+			{ add_child($vl, $_[0]->new_anode('TYPE', 'num'));
+			  annotate_node($vl, 'kind', $k); }
+	
+	|	VAR.k type.t vdlist.vl
+			{ add_child($vl, $t);
+			  annotate_node($vl, 'kind', $k); }
+	
+	|	VAR.k vdlist.vl ':' type.t
+			{ add_child($vl, $t);
+			  annotate_node($vl, 'kind', $k); }
+	
+	|	type.t vdlist.vl
+			{ add_child($vl, $t);
+			  annotate_node($vl, 'kind', 'DYN_VAR'); }
+	;
+
+type	:	WORD.w
+			{
+			    $_[0]->check_type($w);
+			    $_[0]->new_anode('TYPE', $w);
+			}
+	
+	|	WORD.w pairblock.p
+			{
+			    $_[0]->check_type($w);
+			    $_[0]->new_anode('TYPE', $w, children($p));
+			}
+	;
+
+vdlist	:	vardecl.v
+			{ $_[0]->new_node('DECLARE', $v); }
+	
+	|	vdlist.vl ',' vardecl.v
+			{ add_child($vl, $v); }
+	;
+
+vardecl	:	varpart.v unitopt.u
+			{ $_[0]->take_units($v, $u); }
+	
+	|	varpart.v unitopt.u '=' term.e
+			{ add_child($v, $_[0]->new_anode('ATTR', 'value', $e));
+			  $_[0]->take_units($v, $u);
+			  $_[0]->fix_units($v, $e); }
+	
+	|	varpart.v unitopt.u pairblock.p
+			{ add_child($v, children($p));
+			  $_[0]->take_units($v, $u); }
+	
+	|	varpart.v unitopt.u pairblock.p '=' term.e
+			{ add_child($v, children($p));
+			  add_child($v, $_[0]->new_anode('ATTR', 'value', $e));
+			  $_[0]->take_units($v, $u);
+			  $_[0]->fix_units($v, $e); }
+	;
+
+varpart	:	simplevar.v
+			{ $v; }
+	
+	|	simplevar.v dimlist.d
+			{ add_child($v, $d); }
+	;
+
+tl_across :	phase.p ACROSS dimlist.dl where '{'
+			{
+			    $_[0]->push_frame(tag => 'ACROSS', phase => $p,
+					      dimlist => $dl->{children});
+			}
+		progseq.q '}'
+			{
+			    $_[0]->pop_frame('ACROSS');
+			    bless($q, 'ACROSS');
+			    first_child($q, $dl);
+			}
+	;
+
+tl_block :	phase.p '{'
+			{
+			    $_[0]->push_frame(tag => 'BLOCK', phase => $p);
+			}
+		progseq.q '}'
+			{
+			    $_[0]->pop_frame('BLOCK');
+			    bless($q, $p);
+			}
+	;
+
+phase	:	/* null, or */
+			{ $_[0]->{cf}{phase} }
+	
+	|	INIT
+			{ $_[1]; }
+	
+	|	CALC
+			{ $_[1]; }
+	
+	|	STEP
+			{ $_[1]; }
+	
+	|	FINISH
+			{ $_[1]; }
+	;
+
+where	:	/* null, or */
+	
+	|	WHERE expr.e
+			{ $_[0]->new_node('WHERE', $e); }
+	;
+
+line	:	package_line
+
+	|	decl_line.d ';'
+			{ $_[0]->{declare_static}($_[0]->{model},
+						  $d,
+						  $_[0]->{cf}{package});
+			  $d; }
+	
+	|	sideff ';'
+			{ $_[1]; }
+	
+	|	cond
+			{ $_[1]; }
+	
+	|	loop
+			{ $_[1]; }
+	;
+
+package_line :	PACKAGE WORD.w ';'
+			{ $_[0]->set_package($w); undef }
+	;
+
+sideff	:	expr
+			{ $_[1] }
+	
+	|	expr.l IF expr.r
+			{ $_[0]->new_anode('BLOP', 'and', $r, $l) }
+
+	|	expr.l UNLESS expr.r
+			{ $_[0]->new_anode('BLOP', 'or', $r, $l) }
+	;
+
+cond	:	condword.c '(' expr.e ')' '{' 
+		        { $_[0]->push_frame(tag => $c); }
+		stmtseq.q '}' 
+			{ $_[0]->pop_frame($c); }
+		else.x
+			{ $_[0]->new_node($c, $e, $q, $x); }
+	;
+
+condword :	IF
+			{ 'IF' }
+	|	UNLESS
+			{ 'UNLESS' }
+	;
+
+else	:	/* null, or */
+
+	|	ELSE '{'
+			{ $_[0]->push_frame(tag => 'ELSE'); }
+		stmtseq.q '}'
+			{ 
+			    $_[0]->pop_frame('ELSE');
+			    $_[0]->new_node('ELSE', $q);
+			}
+
+	|	ELSIF '(' expr.e ')' '{' 
+			{ $_[0]->push_frame(tag => 'ELSIF'); }
+		stmtseq.q '}' 
+			{ $_[0]->pop_frame('ELSIF'); }
+		else.x
+			{ $_[0]->new_node('ELSIF', $e, $q, $x);	}
+	;
+
+loop	:	loopword.c '(' expr.e ')' '{' 
+			{ $_[0]->push_frame(tag => $c); }
+		stmtseq.q '}'
+			{ $_[0]->pop_frame($c);
+			  $_[0]->new_node($c, $e, $q); }
+	
+	|	FOREACH	scalarvar.i '(' expr.e ')' '{' 
+			{ $_[0]->push_frame(tag => 'FOREACH'); }
+		stmtseq.q '}'
+			{ $_[0]->pop_frame('FOREACH');
+			  $_[0]->markup_var_node($i, 'ASSIGN_VAR');
+			  $_[0]->new_node('FOREACH', $i, $e, $q); }
+	
+	|	FOR '('	expr.e1 ';' expr.e2 ';' expr.e3 ')' '{' 
+			{ $_[0]->push_frame(tag =>'FOR'); }
+		stmtseq.q '}'
+			{ $_[0]->pop_frame('FOR');
+			  $_[0]->new_node('FOR', $e1, $e2, $e3, $q); }
+	;
+
+ctrl	:	DIE expr.e %prec PREC_LOW
+			{ $_[0]->new_anode('CTRL', 'die', $e); }
+	
+ 	|	DIE %prec PREC_LOW
+			{ $_[0]->new_anode('CTRL', 'die'); }
+	
+	|	WARN expr.e %prec PREC_LOW
+			{ $_[0]->new_anode('CTRL', 'warn', $e); }
+	
+	|	WARN %prec PREC_LOW
+			{ $_[0]->new_anode('CTRL', 'warn'); }
+	
+	|	NEXT %prec PREC_LOW
+			{ $_[0]->new_anode('CTRL', 'next'); }
+	
+	|	LAST %prec PREC_LOW
+			{ $_[0]->new_anode('CTRL', 'last'); }
+	
+	|	PRINT.p arglist.e %prec PREC_LOW
+			{ $_[0]->new_anode('PRINT', $p, @{$e->{children}}); }
+	
+	|	RETURN expr.e %prec PREC_LOW
+			{ $_[0]->new_anode('CTRL', 'return', $e); }
+	
+	|	RETURN %prec PREC_LOW
+			{ $_[0]->new-anode('CTRL', 'return'); }
+	;
+
+stmtseq :	/* null */
+			{ $_[0]->new_node('STMTSEQ') }
+		
+	|	stmtseq across
+			{ add_child($_[1], $_[2]) }
+	
+	|	stmtseq block
+			{ add_child($_[1], $_[2]) }
+	
+	|	stmtseq line
+			{ add_child($_[1], $_[2]) }
+	;
+
+across	:	ACROSS dimlist.dl '{'
+			{
+			    $_[0]->push_frame(tag => 'ACROSS', 
+					      dimlist => $dl->{children});
+			}
+		stmtseq.q '}'
+			{
+			    $_[0]->pop_frame('ACROSS');
+			    $_[0]->new_node('ACROSS', $dl, @{$q->{children}});
+			}
+	;
+
+block	:	'{'
+			{ 
+			    $_[0]->push_frame(tag => 'BLOCK'); 
+			}
+		stmtseq.q '}'
+			{
+			    $_[0]->pop_frame('BLOCK');
+			    $_[0]->new_node('BLOCK', @{$q->{children}});
+			}
+	;
+
+pairblock :	'{' pairlist.p '}'
+			{ $p; }
+		
+	|	'{' pairlist.p ',' '}'
+			{ $p; }
+
+	|	'{' '}'
+			{ $_[0]->new_node('PAIRLIST'); }
+	;
+
+pairlist :	pair.q
+			{ $_[0]->new_node('PAIRLIST', $q); }
+	
+	|	pairlist.p ',' pair.q
+			{ add_child($p, $q); }
+	;
+
+pair	:	WORD.tag ':' term.value
+			{ $_[0]->new_anode('ATTR', $tag, $value) }
+	;
+
+expr	:	expr.l ANDOP expr.r
+			{ $_[0]->new_anode('BLOP', 'and', $l, $r) }
+
+	|	expr.l OROP expr.r
+			{ $_[0]->new_anode('BLOP', 'or', $l, $r) }
+
+	|	expr.l XOROP expr.r
+			{ $_[0]->new_anode('BLOP', 'xor', $l, $r) }
+
+	|	list
+			{ $_[1]; }
+	
+	|	error ';'
+			{ $_[0]->YYErrok(); undef; }
+	;
+
+params	:	/* null */
+			{ $_[0]->new_node('PLIST'); }
+		
+	|	paramlist
+			{ $_[1]; }
+	;
+
+paramlist :	param.p
+			{ $_[0]->new_node('PLIST', $p); }
+	
+	|	paramlist.l ',' param.p
+			{ add_child($l, $p); }
+	;
+
+param	:	refopt.r simplevar.v unitopt.u
+			{ my $tn = $_[0]->new_anode('TYPE', 'num');
+			  $tn->{ref} = 1 if $r;
+			  add_child($v, $tn);
+			  $_[0]->take_units($v, $u); }
+	
+	|	WORD.t refopt.r simplevar.v unitopt.u
+			{ my $tn = $_[0]->new_anode('TYPE', $t);
+			  $tn->{ref} = 1 if $r;
+			  add_child($v, $tn);
+			  $_[0]->take_units($v, $u); }
+	
+	|	refopt.r simplevar.v unitopt.u ':' WORD.t
+			{ my $tn = $_[0]->new_anode('TYPE', $t);
+			  $tn->{ref} = 1 if $r;
+			  add_child($v, $tn);
+			  $_[0]->take_units($v, $u); } 
+	;
+
+refopt	:	/* null, or */
+	
+	|	'&'
+			{ 1 }
+	;
+
+argexpr :	/* null */
+	
+	|	arglist %prec PREC_LOW
+			{ $_[1] }
+	;
+
+arglist	:	arglist ','
+			{ $_[1] }
+	
+	|	arglist.a ',' term.t
+			{ add_child($a, $t); }
+	
+	|	term.t
+			{ $_[0]->new_node('LIST', $t); }
+	;
+
+list	:	list ','
+			{ $_[1] }
+	
+	|	list.a ',' term.t
+			{ if ( ref $a eq 'LIST' ) { add_child($a, $t); }
+			  else { $_[0]->new_node('LIST', $a, $t); } }
+	
+	|	term.t %prec PREC_LOW
+			{ $t }
+	;
+
+term	:	termbinop
+			{ $_[1] }
+	
+	|	termunop
+			{ $_[1] }
+	
+	|	NOTOP term
+		        { $_[2] }
+	
+	|	term.a '?' term.b ':' term.c
+			{ $_[0]->new_node('TRI', $a, $b, $c) }
+	
+	|	'(' expr ')' 
+			{ $_[2] }
+	
+	|	varexpr
+			{ $_[1] }
+	
+	|	varexpr INCOP.i
+			{ $_[0]->new_anode('POSTOP', $i, $_[1]); }
+	
+	|	INCOP.i varexpr
+			{ $_[0]->new_anode('PREFOP', $i, $_[2]); }
+	
+	|	NUM
+			{ $_[0]->new_anode('NUM', $_[1]) }
+	
+	|	LITERAL
+			{ $_[0]->new_anode('LITERAL', $_[1]) }
+	
+	|	string
+			{ $_[1] }
+	
+	|	funcall
+			{ $_[1] }
+	
+        |	ctrl %prec '('
+			{ $_[1]; }
+	
+	|	term.t unitspec.u %prec '('
+			{ $_[0]->take_units($t, $u) }
+	
+	|	YADAYADA
+			{ $_[0]->new_node('YADAYADA'); }
+	;
+
+termbinop:	varexpr.l ASSIGNOP.op term.r
+			{ $_[0]->markup_var_node($l, 'ASSIGN_VAR');
+			  $_[0]->new_anode('ASSIGN', $op, $l, $r); }
+	
+	|	varexpr.l '=' term.r
+			{ $_[0]->markup_var_node($l, 'ASSIGN_VAR');
+			  $_[0]->new_anode('ASSIGN', '=', $l, $r); }
+	
+	|	varexpr.l BINDOP.op term.r
+			{ $_[0]->markup_var_node($l, 'ASSIGN_VAR');
+			  $_[0]->new_anode('ASSIGN', $op, $l, $r); }
+	
+	|	term.l ADDOP.op term.r
+			{ $_[0]->new_anode('BNOP', $op, $l, $r); }
+	
+	|	term.l MULOP.op term.r
+			{ $_[0]->new_anode('BNOP', $op, $l, $r); }
+	
+	|	term.l MINMAX.op term.r
+			{ $_[0]->new_anode('BNOP', $op, $l, $r); }
+	
+	|	term.l CONCAT.op term.r
+			{ if ( ref $l eq 'MSOP' ) 
+			      { add_child($l, $r); } 
+			  else 
+			      { $_[0]->new_anode('MSOP', '~', $l, $r); } }
+	
+        |	term.l POWOP.op term.r
+			{ $_[0]->new_anode('BNOP', $op, $l, $r); }
+	
+	|	term.l RELOP.op term.r
+			{ $_[0]->new_anode('RELOP', $op, $l, $r); }
+	
+	|	term.l DOTDOT term.r
+			{ $_[0]->new_node('DOTDOT', $l, $r); }
+	
+	|	term.l ANDAND term.r
+			{ $_[0]->new_anode('BLOP', 'and', $l, $r); }
+	
+	|	term.l OROR term.r
+			{ $_[0]->new_anode('BLOP', 'or', $l, $r); }
+	
+	|	term.l DORDOR term.r
+			{ $_[0]->new_anode('BLOP', 'dor', $l, $r); }
+	
+#	|	term MATCHOP term
+	;
+
+termunop:	ADDOP.op term.t %prec UMINUS
+			{ $op eq '-' ? $_[0]->new_node('UMINUS', $t) : $t }
+    
+	|       NOT2 term.t %prec UMINUS
+			{ $_[0]->new_node('NOT', $t) }
+	;
+
+string	:	STRS
+			{ $_[0]->new_anode('STR', $_[1]); }
+	
+	|	STRQ
+			{ $_[0]->new_snode($_[1]); }
+	;
+
+varexpr	:	simplevar.v
+			{
+			    $_[0]->markup_var_node($v, 'CALC_VAR');
+			}
+	
+	|	varexpr.v subexpr.s
+			{
+			    add_child($v, $s);
+			    #add_child($v, @{$s->{children}});
+			    #$_[0]->markup_var_node($v, 'CALC_VAR');
+			}
+	
+	|	varexpr.v DOT WORD.f
+			{
+			    #$_[0]->markup_var_node($v, 'CALC_VAR');
+			    add_child($v, $_[0]->new_anode('SUBFIELD', $f));
+			}
+	
+	
+	|	varexpr.v DOT FUNC.m '(' argexpr.a ')'
+			{
+			    #$DB::single = 1;
+			    #$_[0]->markup_var_node($v, 'CALC_VAR');
+			    my $n = $_[0]->new_anode('METCALL', $m);
+			    add_child($n, @{$a->{children}}) if ref $a;
+			    add_child($v, $n);
+			}
+	;
+
+simplevar :	scalarv %prec PREC_LOW
+			{ $_[1]; }
+
+	|	indexv %prec PREC_LOW
+			{ $_[1]; }
+
+	|	listv %prec PREC_LOW
+			{ $_[1]; }
+	
+	|	setv %prec PREC_LOW
+			{ $_[1]; }
+	;
+
+scalarvar:	scalarv.v
+			{ $_[0]->markup_var_node($v, 'CALC_VAR'); }
+	;
+
+scalarv	:	WORD.n
+			{ $_[0]->new_anode('SCALARV', $n); }
+	
+	|	'$' WORD.n
+			{ $_[0]->new_anode('SCALARV', $n); }
+	;
+
+indexv	:	'$' '$' WORD.n
+			{ $_[0]->new_anode('INDEXV', $n); }
+	
+	|	'$' '$' NUM.n
+			{ $_[0]->new_anode('INDEXV', $n); }
+	;
+
+listv	:	'@' WORD.n
+			{ $_[0]->new_anode('LISTV', $n); }
+	;
+
+setv	:	'%' WORD.n
+			{ $_[0]->new_anode('SETV', $n); }
+	;
+
+dimlist :	dimspec.d
+			{ $_[0]->new_node('DIMLIST', $d); }
+	 
+	|	dimlist.l dimspec.d
+			{ first_child($l, $d); }
+	;
+
+dimspec	:	'[' setv.s ']'
+			{ $s; }
+	
+	|	'[' NUM.e ']' %prec PREC_LOW
+			{ $_[0]->new_anode('SIZE', $e); }
+	
+	|	'[' NUM.a DOTDOT NUM.b ']'
+			{ $_[0]->new_anode('RANGE', "$a:$b"); }
+	;
+
+label	:	WORD.w ':'
+			{ $w; }
+	;
+
+subexpr	:	'[' ']'
+			{ $_[0]->new_node('SUBSEMPTY'); }
+	
+	|	'[' expr ']'
+			{ $_[0]->new_node('SUBSCRIPT', $_[2]); }
+	;
+
+funcall	:	FUNC.fun '(' argexpr.a ')'
+			{ $_[0]->new_anode('FUNCALL', $fun, @{$a->{children}}) }
+	;
+
+/* objname:	WORD.n %prec PREC_LOW
+			{ $_[0]->new_anode('FUNCALL', $n) }
+	;*/
+
+# argexpr :	/* null, or */
+	
+# 	|	arglist
+# 			{ $_[1] }
+# 	;
+
+# arglist	:	arg.t
+# 			{ $_[0]->new_node('ARGS', $t); }
+	
+# 	|	argexpr.a ',' arg.t
+# 			{ add_child($a, $t); }
+# 	;
+
+# arg	:	term
+# 			{ $_[1] }
+	
+# 	|	pair
+# 			{ $_[1] }
+# 	;
+
+sc_or_pv :	scalarv.s
+			{ $_[0]->markup_var_node($s, 'FLOW_VAR'); }
+	
+	|	pvar.p
+			{ $p; }
+	;
+
+flow	:
+	
+      	# multiplying versions, first position
+	
+		scalarv.so MULOP.op '(' expr.coeff ')' FLOWRIGHT sc_or_pv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_0', $so, $sn, $coeff);
+			}
+
+	|	scalarv.sn MULOP.op '(' expr.coeff ')' FLOWLEFT sc_or_pv.so
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_1', $so, $sn, $coeff); 
+			}
+	
+	# multiplying versions, second position
+	
+	|	scalarv.so FLOWRIGHT '(' expr.coeff ')' MULOP.op scalarv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_1', $so, $sn, $coeff);
+			}
+	
+	|	pvar.so FLOWRIGHT '(' expr.coeff ')' MULOP.op scalarv.sn
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_1', $so, $sn, $coeff);
+			}
+	
+	|	scalarv.sn FLOWLEFT '(' expr.coeff ')' MULOP.op scalarv.so
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_0', $so, $sn, $coeff);
+			}
+	
+	|	pvar.sn FLOWLEFT '(' expr.coeff ')' MULOP.op scalarv.so
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_0', $so, $sn, $coeff);
+			}
+	
+	# multiplying versions, third position
+	
+	|	scalarv.so FLOWRIGHT scalarv.sn MULOP.op '(' expr.coeff ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_1', $so, $sn, $coeff);
+			}
+	
+	|	pvar.so FLOWRIGHT scalarv.sn MULOP.op '(' expr.coeff ')'
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_1', $so, $sn, $coeff);
+			}
+	
+	|	scalarv.sn FLOWLEFT scalarv.so MULOP.op '(' expr.coeff ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_0', $so, $sn, $coeff);
+			}
+	
+	|	pvar.sn FLOWLEFT scalarv.so MULOP.op '(' expr.coeff ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW_0', $so, $sn, $coeff);
+			}
+	
+	# now the non-multiplying versions, first position
+	
+	|	scalarv.so '(' expr.rate ')' FLOWRIGHT sc_or_pv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	scalarv.so '(' WORD.w ')' FLOWRIGHT sc_or_pv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	scalarv.so '(' WORD.w ':' expr.rate ')' FLOWRIGHT sc_or_pv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate);
+			}
+	
+	|	scalarv.sn '(' expr.rate ')' FLOWLEFT sc_or_pv.so
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	scalarv.sn '(' WORD.w ')' FLOWLEFT sc_or_pv.so
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	scalarv.sn '(' WORD.w ':' expr.rate ')' FLOWLEFT sc_or_pv.so
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate);
+			}
+	
+	|	pvar.so '(' expr.rate ')' FLOWRIGHT scalarv.sn
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	pvar.so '(' WORD.w ')' FLOWRIGHT scalarv.sn
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	pvar.so '(' WORD.w ':' expr.rate ')' FLOWRIGHT scalarv.sn
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate);
+			}
+	
+	|	pvar.sn '(' expr.rate ')' FLOWLEFT scalarv.so
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	pvar.sn '(' WORD.w ')' FLOWLEFT scalarv.so
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	pvar.sn '(' WORD.w ':' expr.rate ')' FLOWLEFT scalarv.so
+			{
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate);
+			}
+	
+	# now the non-multiplying versions, second position
+	
+	|	scalarv.so FLOWRIGHT '(' expr.rate ')' sc_or_pv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	scalarv.so FLOWRIGHT '(' WORD.w ')' sc_or_pv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	scalarv.so FLOWRIGHT '(' WORD.w ':' expr.rate ')' sc_or_pv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $rate, $tag);
+			}
+	
+	|	scalarv.sn FLOWLEFT '(' expr.rate ')' sc_or_pv.so
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	scalarv.sn FLOWLEFT '(' WORD.w ')' sc_or_pv.so
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	scalarv.sn FLOWLEFT '(' WORD.w ':' expr.rate ')' sc_or_pv.so
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $rate, $tag);
+			}
+	
+	|	pvar.so FLOWRIGHT '(' expr.rate ')' scalarv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	pvar.so FLOWRIGHT '(' WORD.w ')' scalarv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	pvar.so FLOWRIGHT '(' WORD.w ':' expr.rate ')' scalarv.sn
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate);
+			}
+	
+	|	pvar.sn FLOWLEFT '(' expr.rate ')' scalarv.so
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	pvar.sn FLOWLEFT '(' WORD.w ')' scalarv.so
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	pvar.sn FLOWLEFT '(' WORD.w ':' expr.rate ')' scalarv.so
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate);
+			}
+	
+	# now the non-multiplying versions, third position
+	
+	|	scalarv.so FLOWRIGHT sc_or_pv.sn '(' expr.rate ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	scalarv.so FLOWRIGHT sc_or_pv.sn '(' WORD.w ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	scalarv.so FLOWRIGHT sc_or_pv.sn '(' WORD.w ':' expr.rate ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $rate, $tag);
+			}
+	
+	|	scalarv.sn FLOWLEFT sc_or_pv.so '(' expr.rate ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	scalarv.sn FLOWLEFT sc_or_pv.so '(' WORD.w ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	scalarv.sn FLOWLEFT sc_or_pv.so '(' WORD.w ':' expr.rate ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $rate, $tag);
+			}
+	
+	|	pvar.so FLOWRIGHT scalarv.sn '(' expr.rate ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	pvar.so FLOWRIGHT scalarv.sn '(' WORD.w ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	pvar.so FLOWRIGHT scalarv.sn '(' WORD.w ':' expr.rate ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate);
+			}
+	
+	|	pvar.sn FLOWLEFT scalarv.so '(' expr.rate ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    $_[0]->new_node('FLOW', $so, $sn, $rate);
+			}
+	
+	|	pvar.sn FLOWLEFT scalarv.so '(' WORD.w ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag);
+			}
+	
+	|	pvar.sn FLOWLEFT scalarv.so '(' WORD.w ':' expr.rate ')'
+			{
+			    $_[0]->markup_var_node($so, 'FLOW_VAR');
+			    $_[0]->markup_var_node($sn, 'FLOW_VAR');
+			    my $tag = $_[0]->new_anode('TAG', $w);
+			    $_[0]->new_node('FLOW', $so, $sn, $tag, $rate);
+			}
+	;
+
+pvar	:	PVAR.f
+			{
+			    $_[0]->new_anode('PVAR', $f);
+			}
+	;
+
+unitopt	:	/* null, or */
+	
+	|	unitspec
+			{ $_[1] }
+	;
+
+unitspec:	'<' unitlist.ulist '>'
+			{ $_[0]->finish_units($_[0]->new_node('UNITSPEC'), 
+					      $ulist) }
+	
+	|	error '>'
+			{ $_[0]->YYErrok(); undef; }
+	;
+
+unitlist:	/* null, or */
+			{ $_[0]->new_node('UNITLIST') }
+
+	|	unitlist UNIT
+			{ my ($unit, $count) = $_[0]->validate_unitspec($_[2]);
+			  add_units($_[1], $unit, $count); }
+	;
+
+%%
+
+
+use Carp;
+#use Text::Balanced qw/:ALL/;
+
+# Auxiliary routines
+# ------------------
+
+# init ( )
+# 
+# This function modifies the EYapp Parser object by adding the extra fields we
+# will need.
+
+sub init {
+
+    my ($self, $model) = @_;
+    
+    $self->{my_stack} = [];
+    $self->{lex_mode} = 'mad';
+    $self->{frame} = [{tag => 'PROGRAM', phase => 'INIT', package => 'main', 
+		      module => '', dimcount => 0}];
+    $self->{cf} = $self->{frame}[0];
+    $self->{model} = $model;
+    
+    return $self;
+}
+
+# parse_input ( $filename )
+# 
+# If $filename is given, parse the contents of that file using the grammar
+# specified above.  Unless, of course, the file cannot be read, in which case
+# the program will terminate.  If $filename is empty, read from standard input
+# and parse that.
+
+sub parse_input {
+
+    my ($self, $filename) = @_;
+    my $input;
+    
+    # If a filename was specified...
+    
+    if ( $filename ne '' ) {
+	
+	# Read the entire file as if it were a single line, by locally
+	# undefining $/ ($INPUT_RECORD_SEPARATOR).
+	
+	local $/;
+	
+	# Open the file, or die trying.  Read the contents into $input.
+	
+ 	open my $ifh, "<", $filename or die "Error reading file \"$filename\": $!";
+	$input = <$ifh>;
+    }
+    
+    # If no filename was specified...
+    
+    else {
+	
+	# Use the dummy filename "<>" in case we have to emit any error messages.
+	
+	$filename = "<>";
+	
+	# Read the entire input as if it were a single line, by locally
+	# undefining $/ ($INPUT_RECORD_SEPARATOR).
+	
+	local $/;
+	
+	# Read from standard input into the variable $input.
+	
+	$input = <STDIN>;
+    }
+    
+    # Remember the name of the file we are reading from, the starting line
+    # number (1) and the contents that we read in.
+    
+    $self->{my_filename} = $filename;
+    $self->{my_line} = 1;
+    $self->{my_input} = \$input;
+}
+
+
+sub parse_include {
+
+    my ($self, $filename) = @_;
+    my $input;
+    
+    # identify the directory path of the current filename (if any) so that
+    # we can look up the next filename in the same directory.
+    
+    my ($base) = ($self->{my_filename} =~ m{(.*/)});  
+    $filename = "$base$filename" if $base ne '';
+    
+    # Read the entire file as if it were a single line, by locally
+    # undefining $/ ($INPUT_RECORD_SEPARATOR).
+    
+    local $/;
+    
+    # Open the file, or die trying.  Read the contents into $input.
+    
+    open my $ifh, "<", $filename or die "Error reading file \"$filename\": $!";
+    $input = <$ifh>;
+
+    # If we actually got some input, process it.
+    
+    if ( $input =~ /\S/ ) {
+	
+	# Push the current file's information on the stack, so that we can
+	# return to it when we're done with this included file.
+	
+	unshift @{$self->{my_stack}}, {file => $self->{my_filename}, 
+					     line => $self->{my_line}, 
+					     input => $self->{my_input}};
+	
+	# Now remember the name of the file we are reading from, the starting
+	# line number (1) and the contents that were read in.
+	
+	$self->{my_filename} = $filename;
+	$self->{my_line} = 1;
+	$self->{my_input} = \$input;
+    }
+}
+
+
+# pop_input ( )
+# 
+# This function is called by the lexer when it gets to the end of its input.
+# The input stack is popped.  The function will then return true if there
+# is anything remaining on the stack (i.e. a file which we need to pick up
+# parsing again after the pause for an included file) and false otherwise.
+
+sub pop_input {
+
+    my $self = shift;
+    
+    # If the input stack is empty, return false.  We have finished processing
+    # the file we started with, and there is nothing left to do.
+    
+    if ( @{$self->{my_stack}} == 0 ) {
+	return 0;
+    }
+
+    # Otherwise, we have finished processing a file that was included from
+    # another one, and should resume the other file where we left off.
+    
+    else {
+	$self->{my_filename} = $self->{my_stack}[0]{file};
+	$self->{my_line} = $self->{my_stack}[0]{line};
+	$self->{my_input} = $self->{my_stack}[0]{input};
+	shift @{$self->{my_stack}};
+	return 1;
+    }
+}
+
+
+# Utility functions for parsing
+# -----------------------------
+
+# set_package ( $name )
+# 
+# From here to the end of the current block, all non-dynamic variable names
+# will be evaluated in the context specified by $name.
+
+sub set_package {
+
+    my ($self, $name) = @_;
+    $self->{cf}{package} = $name;
+    $self->{model}->see_package($name);
+}
+
+
+# full_name ( $name )
+# 
+# If the current package is 'main', return the name unchanged.
+# Otherwise, prefix the current package name.
+
+sub full_name {
+
+    my ($self, $name) = @_;
+    return $name if $self->{cf}{package} eq 'main';
+    return $self->{cf}{package} . '::' . $name;
+}
+
+
+# push_frame ( %attributes )
+# 
+# Add a new context to the frame stack.  This context will be used to
+# interpret all subsequent statements until the next call to push_frame or
+# pop_frame.  All attributes not specified by %attributes are inherited from
+# the previous frame, except for 'tag' which is used to match up pushes and
+# pops in the presence of syntax errors.
+
+sub push_frame {
+
+    my ($self, %attrs) = @_;
+  
+    $self->{cf} = \%attrs;
+    #print "PUSH $attrs{tag} => ";
+    #foreach my $f (@{$self->{frame}})
+    #{
+    #	print $f->{tag}, ", ";
+    #}
+    #print "\n";
+    $attrs{phase} ||= $self->{frame}[0]{phase};
+    $attrs{package} ||= $self->{frame}[0]{package};
+    $attrs{struct} ||= $self->{frame}[0]{struct};
+    
+    if ( ref $attrs{dimlist} eq 'ARRAY' ) {
+	my @dimlist = @{$attrs{dimlist}};
+	#foreach my $dimspec (@{$attrs{dimlist}}) {
+	#    push @dimlist, $model->see_dimension($dimspec);
+	#}
+	#$attrs{dimension} = \@dimlist;
+	$attrs{dimcount} = scalar(@dimlist) + $self->{frame}[0]{dimcount};
+    }
+    else {
+	#$attrs{dimension} = $self->{frame}[0]{dimension};
+	$attrs{dimcount} = 0 + $self->{frame}[0]{dimcount};
+    }
+    
+    unshift @{$self->{frame}}, $self->{cf};
+}
+
+
+# pop_frame ( $tag )
+# 
+# Remove the top context from the frame stack.  If that context did not have
+# the tag $tag, keep removing contexts until we find one that does.  The first
+# of the remaining contexts now becomes the active one.
+
+sub pop_frame {
+
+    my ($self, $tag) = @_;
+    
+    while ( $self->{frame}[0]{tag} ne $tag and $self->{frame}[0]{tag} ne 'PROGRAM' ) {
+	#$DB::single = 1;
+	#print "BYPASS $self->{frame}[0]{tag} ($tag)\n";
+	shift @{$self->{frame}};
+    }
+    
+    if ( $self->{frame}[0]{$tag} eq 'PROGRAM' ) {
+	die "Frame Error (internal)";
+    }
+    else {
+    	#print "POP $self->{frame}[0]{tag}\n";
+	shift @{$self->{frame}};
+    }
+}
+
+
+# frame_attr ( $attr )
+# 
+# Return the value of the given attribute, if defined in the current frame.
+
+sub frame_attr {
+    
+    my ($self, $attr) = @_;
+    
+    return $self->{frame}[0]{$attr};
+}
+
+
+# use_perl ( $module )
+# 
+# Call "require" on the perl module $module.  (We can't use "use" because
+# we're doing compilation right now, during Perl's run phase.)
+
+sub use_perl {
+    
+    my ($self, $module) = @_;
+    
+    $module =~ s{::}{/};
+    eval {
+	require "Mad/Object/$module";
+    };
+    
+    if ( $@ ) {
+	$@ =~ s/ at Mad.*$//;
+	$self->gen_error($@);
+    }
+    # NEEDS: import (maybe?)
+}
+
+
+# check_type ( $type )
+# 
+# Return true if this is a valid Mad object class or primitive type, false
+# otherwise.
+
+sub check_type {
+
+    my ($self, $type) = @_;
+    
+    return $type if $type =~ /^(int|num|string|flag|value)$/;
+    return $type if exists $Mad::Object::{$type . '::'};
+    return undef;
+}
+
+
+# decare_unit ( $node )
+# 
+# Declare all of the units given by the children of $node.
+
+sub declare_unit {
+    my ($self, $unit) = @_;
+    $self->{model}->declare_unit($unit);
+}
+
+
+# validate_unitspec ( $raw )
+# 
+# Validate the unit specification contained in $raw.  If its syntax is
+# incorrect, return 'ERROR'.  Otherwise, figure out the unit's power and
+# return a list containing the unit followed by its power.  For example, <m^2>
+# means "meters squared" and would result in the list ("m", 2).  Units that
+# would appear in the denominator have a negative power.  For example, <s^-2>
+# and </s^2> both mean "per second per second" and would result in the list
+# ("s", -2).
+
+sub validate_unitspec {
+    my ($self, $raw) = @_;
+    my ($invert, $unit, $count);
+    
+    if ( $raw eq '/' ) {
+        return ('/', 1);
+    }
+    
+    if ( $raw =~ m{^([/*]?)\s*([a-zA-Z0-9]+)(\^([0-9]+))?$} ) {
+	$unit = $2;
+	$count = $4 != 0 ? $4+0 : 1;
+	$count = -$count if $1 eq '/';
+	if ( my $canonical = $self->{model}->has_unit($unit) ) {
+	    return $canonical, $count;
+	}
+	else {
+	    $unit =~ s:^/::;
+	    $self->gen_error("unit '$unit' must be declared before it is used");
+	    return ();
+	}
+    }
+    elsif ( $raw =~ m{^\*?\s*([a-zA-Z]+)\^-([0-9]+)$} ) {
+	$unit = $1;
+	$count = 0-$2;
+	if ( my $canonical = $self->{model}->has_unit($unit) ) {
+	    return $canonical, $count;
+	}
+	else {
+	    $unit =~ s:^/::;
+	    $self->gen_error("unit '$unit' must be declared before it is used");
+	    return ();
+	}
+    }
+    else {
+	$self->gen_error("syntax error in unit specification '$raw'");
+	return ();
+    }
+}
+
+
+# Functions for constructing parse trees
+# --------------------------------------
+
+# new_node ( $type, @children )
+# 
+# Create a new parse node, with children given by @children.  This will be
+# part of the growing parse tree.  Each of @children should be a reference to
+# another node.
+
+sub new_node {
+    my ($self, $type, @children) = @_;
+    
+    my $node = {children => [], filename => $self->{my_filename}, line => $self->{my_line}};
+    bless $node, $type;
+    
+    push @{$node->{children}}, @children if @children > 0;
+    return $node;
+}
+
+# new_anode ( $type, $attr, @children )
+# 
+# Similar to new_node, but with the addition of the parameter $attr which is
+# used to set the "attr" field of the new node.  This is used to record the
+# value of a string or numeric literal, the name of a variable, etc.
+
+sub new_anode {
+    my ($self, $type, $attr, @children) = @_;
+    
+    my $node = {children => [], filename => $self->{my_filename}, 
+		line => $self->{my_line}};
+    bless $node, $type;
+    
+    $node->{attr} = $attr if defined $attr;
+    
+    push @{$node->{children}}, @children if @children > 0;
+    return $node;
+}
+
+
+# new_fnode ( $type, $subtype, @children )
+# 
+# Similar to new_anode, but sets the "type" field instead of the "attr"
+# field.  Used for 'FLOW'nodes.
+
+sub new_fnode {
+    my ($self, $type, $subtype, @children) = @_;
+    
+    my $node = {children => [], filename => $self->{my_filename}, line => $self->{my_line}};
+    bless $node, $type;
+    
+    $node->{type} = $subtype if defined $subtype;
+    
+    push @{$node->{children}}, @children if @children > 0;
+    return $node;
+}
+
+
+# new_snode ( $string_value )
+# 
+# Creates either one new string node or a concatenation expression.
+
+sub new_snode {
+    my ($self, $string_value) = @_;
+    
+    my (@new_nodes);
+    
+    while ( $string_value ne '' ) {
+
+	if ( $string_value =~ /^([^\$\@\%\\]+)(.*)$/ ) {
+	    push @new_nodes, $self->new_anode('STR', $1);
+	    $string_value = $2;
+	}
+	
+	elsif ( $string_value =~ /^\\(.)(.*)$/ ) {
+	    push @new_nodes, $self->new_anode('ESC', "\\$1");
+	    $string_value = $2;
+	}
+	
+	elsif ( $string_value =~ /^\$\$([a-zA-Z0-9_]+)(.*)$/ ) {
+	    push @new_nodes, $self->new_anode('INDEXV', $1);
+	    $string_value = $2;
+	}
+	
+	elsif ( $string_value =~ /^\$([a-zA-Z0-9_]+)(.*)$/ ) {
+	    push @new_nodes, $self->new_anode('SCALARV', $1);
+	    $string_value = $2;
+	}
+	
+	elsif ( $string_value =~ /^([\$\@\%])(.*)$/ ) {
+	    
+	    if ( @new_nodes ) {
+		$new_nodes[-1]{attr} .= $1;
+	    } else {
+		push @new_nodes, $self->new_anode('STR', $1);
+	    }
+	    $string_value = $2;
+	}
+	
+	else {
+	    $self->syntax_error("error deconstructing a string");
+	    return;
+	}
+    }
+    
+    if ( @new_nodes == 0 ) {
+	return $self->new_anode('STR', '');
+    }
+    
+    elsif ( @new_nodes == 1 ) {
+	return $new_nodes[0];
+    }
+    
+    else {
+	return $self->new_anode('MSOP', '~', @new_nodes);
+    }
+}
+
+
+# add_child ( $node, $child )
+# 
+# Add $child to the children of an existing node in the parse tree,
+# provided that $child is a reference to a node.  If it is not, do nothing.
+
+sub add_child {
+    my ($node, @children) = @_;
+    
+    foreach my $child (@children) {
+	push @{$node->{children}}, $child if ref $child;
+    }
+    
+    return $node;
+}
+
+
+# first_child ( $node, $child )
+# 
+# Add $child to the front of the existing list of children of $node.
+
+sub first_child {
+    my ($node, $child) = @_;
+    
+    unshift @{$node->{children}}, $child if ref $child;
+    return $node;
+}
+
+
+# children ( $node )
+# 
+# Return the list of children of the given node.
+
+sub children {
+
+    my $node = shift;
+    return @{$node->{children}} if ref $node->{children} eq 'ARRAY';
+}
+
+
+# add_attr ( $node, $attr )
+# 
+# Modify $node to have attr $attr.  If a second attribute is given, put it
+# into 'namespace'.
+
+sub add_attr {
+    my ($node, $attr, $namespace) = @_;
+    
+    $node->{attr} = $attr;
+    $node->{ns} = $namespace;
+    return $node;
+}
+
+
+# add_units ( $node, $unit, $count )
+# 
+# Modify the parse node $node by adding some units to it.  This is triggered
+# by a unit expression such as "<mi/hr>".  This information will then be used
+# to make sure that any equations involving the entity declared by $node are
+# unit-balanced.
+
+sub add_units {
+    my ($node, $unit, $count) = @_;
+    
+    # Make sure that the field "units" exists and points to a hash.
+    
+    unless ( ref $node->{units} eq 'Units' ) {
+	$node->{units} = bless {}, 'Units';
+    }
+    
+    # If the unit is '/', ignore it unless there are no other units.
+    
+    if ( $unit eq '/' and scalar(keys %{$node->{units}}) > 0 ) {
+	return $node;
+    }
+    
+    # Add the given units to the unit hash, and remove any entry that gets
+    # zeroed out.
+    
+    $node->{units}{$unit} += $count;
+    delete $node->{units}{$unit} if $node->{units}{$unit} == 0;
+    
+    return $node;
+}
+
+
+# finish_units ( $node, $unitnode )
+# 
+# Finish a unit specification.  If the specification was empty, then turn it
+# into a wildcard.  The final expression 
+
+sub finish_units {
+    
+    my ($self, $node, $unitnode) = @_;
+    
+    if ( defined $unitnode->{units} and ref $unitnode->{units} eq 'Units' ) {
+	$node->{units} = $unitnode->{units};
+    }
+    
+    else {
+	$node->{units} = bless { '*' => 1 }, 'Units';
+    }
+    
+    return $node;
+}
+
+
+# take_units ( $node, $unitnode )
+# 
+# Modify the node $node by copying to it the list of units already associated
+# with $unitnode.
+
+sub take_units {
+    my ($self, $node, $unitnode) = @_;
+    
+    if ( ref $unitnode ) {
+	
+	# First check to see if $node already has units.  If so, and if
+	# $unitnode also has units, signal an error.
+	# $$$$$ unless equivalent
+	
+	if ( ref $node->{units} and ref $unitnode->{units} ) {
+	    $self->syntax_error("attempt to redefine the units of a variable or expression");
+	}
+	
+	# Otherwise, just copy the reference to the unit list.
+	
+	else {
+	    $node->{units} = $unitnode->{units};
+	}
+    }
+    return $node;
+}
+
+
+# fix_units ( $node, $expr_node )
+# 
+# The purpose of this routine is to allow constants and variables to be
+# declared with the unit specification to the right of the initialization
+# expression if that expression is a literal.  In other words: $a = 2 <m/s>
+# instead of $a <m/s> = 2.
+
+sub fix_units {
+
+    my ($self, $node, $expr_node) = @_;
+    
+    my $u = $expr_node->{units};
+    
+    # unless equivalent $$$$$$$
+    
+    if ( ref $u eq 'Units' ) {
+	if ( exists $node->{units} and ref $node->{units} eq 'Units' ) {
+	    $self->syntax_error("unit conflict on '$node->{attr}'");
+	} else {
+	    $node->{units} = $u;
+	}
+    }
+    
+    return $node;
+}
+
+
+# annotate_node ( $node, $field, $value )
+# 
+# Add the given field to the given node, with the given value.
+
+sub annotate_node {
+    
+    my ($node, $field, $value) = @_;
+    
+    $node->{$field} = $value;
+    return $node;
+}
+
+
+# Functions that help the lexical analyzer
+# ----------------------------------------
+
+# lex_mode ( $mode )
+# 
+# Put the lexical analyzer into the given mode.  This will tell it what to
+# expect next.  Options include:
+# 
+# mad		Expect regular Mad code
+# perl		Expect Perl code
+# pperl		Expect Perl code which will be terminated by %}
+# units		Expect a unit specification, i.e. "<mi/hr>"
+
+sub lex_mode {
+    my ($self, $mode) = @_;
+    
+    # Set our "lex_mode" field, and then initialize the brace count to 1 in
+    # case we need to count braces to determine when the current mode ends.
+    
+    $self->{lex_mode} = $mode;
+    $self->{brcount} = 1;
+}
+
+
+# count_brace ( $adjustment )
+# 
+# Adjust the brace count up or down (depending on whether $adjustment is
+# greater than or less than zero).  If the brace count becomes zero, the
+# lexical mode returns to 'mad' and we return the token '{'.  Otherwise,
+# whichever token is currently being parsed is part of perl code and so we
+# return the token 'PERLPART'.
+
+sub count_brace {
+    my ($self, $adjustment) = @_;
+    $self->{brcount} += $adjustment;
+    if ( $self->{brcount} == 0 && $adjustment < 0 ) {
+	$self->{lex_mode} = 'mad';
+	return '}';	  # {
+    }
+    else {
+	return 'PERLPART';
+    }
+}
+
+# syntax_error ( $msg )
+# 
+# Terminate parsing because of an error.
+
+sub syntax_error {
+    my ($self, $msg) = @_;
+    
+    $DB::single = 1;
+    my $filename = $self->{my_filename};
+    my $line = $self->{my_line};
+    
+    my $token = $self->YYCurval();
+    my $near = ", near '$token'" if $token;
+    
+    if ( $msg ) {
+        print STDERR "Syntax error at line $line of $filename$near: $msg\n";
+    }
+    else {
+	my @expected = $self->YYExpect();
+	if ( @expected == 1 ) {
+	    print STDERR "Syntax error at line $line of $filename, $near: \
+expected $expected[0]";
+	}
+	else {
+	    print STDERR "Syntax error at line $line of $filename$near.\n";
+	}
+    }
+    
+    die "Done.\n" if $main::PRINT_TREE;
+}
+
+
+# gen_error ( $msg )
+# 
+# This routine is called when a syntax error is found by auxiliary
+# code.  It calls the syntax_error routine, and also increments the
+# error count.
+
+sub gen_error {
+    my ($self, $msg) = @_;
+    
+    $self->syntax_error($msg);
+    ${$$self{NBERR}} += 1;
+}
+
+
+sub my_warning {
+    my ($self, $msg, $filename, $line) = @_;
+    
+    $filename = $self->{my_filename} unless defined $filename;
+    $line = $self->{my_line} unless defined $line;
+    
+    print STDERR "Warning at $self->{my_filename} line $self->{my_line}: $msg\n";
+}
+
+# The lexical analyzer
+# --------------------
+
+# This function is called repeatedly by the parser.  Its job is to determine
+# the next token in the input stream and return a pair ($token, $value).  It
+# should return ('', undef) when it runs out of input, which signals the
+# parser that we are done.
+
+sub my_lexer {
+    my $self = shift;
+    my $m;
+    
+    my ($cond) = $self->{my_lex_condition};
+    $self->{my_lex_condition} = undef;
+    
+    # Allow retries when we process comments, or when we get to the end of a
+    # file and need to pop the input file stack (i.e. because we were
+    # processing an included file).
+    
+    while ( 1 )
+    {
+	# The 'for' is used below to set $_ rather than as a loop.
+	
+	for (${$self->{my_input}}) {
+	    
+	    # Start by skipping whitespace.  Note that we have to keep count
+	    # of the number of newlines we pass, so that error messages will
+	    # indicate the proper line number.
+	    
+	    m{\G(\s+)}gc and $self->{my_line} += ($1 =~ tr{\n}{});
+	    
+	    # If we find a comment, skip the rest of the line.  There might
+	    # not be a following newline if the comment is the last thing in
+	    # the file.
+	    
+	    m{\G#.*\n?}gc and $self->{my_line}++, next;
+	    
+	    # Now, if we are done with the current input, see if there's
+	    # anything waiting on the input file stack (i.e. because we were
+	    # processing an included file).  If not, return the signal for
+	    # "end of input".
+	    
+	    if ( defined(pos($_)) and pos($_) >= length($_) ) {
+		return ('EOF', '') if $self->pop_input();
+		return (undef, undef); # otherwise
+	    }
+	    	    
+	    # If we find something that could be the start of a unit
+	    # specification, then we switch to 'units' mode.
+	    
+	    if ( m{\G<(?=[\s\p{IsWord}/*^-]*>)}gc ) {
+		$self->{lex_mode} = 'units';
+		return ('<', '');
+	    }
+	    
+	    if ( $self->{lex_mode} eq 'units' ) {
+		m{\G\s*>}gc	and $self->{lex_mode} = 'mad', return ('>', '');
+		m{\G/(?=>)}gc	and return ('UNIT', '/');
+		m{\G\s*([/*]?\s*\p{IsWord}+(:?\^?-?[0-9]+)?)}gc
+				and return ('UNIT', $1);
+		return ('ERROR', '');
+	    }
+	    
+	    # Otherwise, we're parsing our modeling language.  Start by looking for
+	    # keywords, unless the condition 'var' or 'fld' is active.
+	    
+	    unless ( $cond eq 'fld' or $cond eq 'var' ) {
+	    
+	    m{\Gacross(?!\w)}gc		and return ('ACROSS', '');
+	    m{\Gand(?!\w)}gc		and return ('ANDOP', '');
+	    m{\Gcalc(?!\w)}gc		and return ('CALC', 'CALC');
+	    m{\Gclass(?!\w)}gc		and return ('STRUCT', 'CLASS');
+	    m{\Gconst(?!\w)}gc		and return ('VAR', 'CONST_VAR');
+	    m{\Gdefine(?!\w)}gc		and return ('VAR', 'CALC_VAR');
+	    m{\Gdie(?!\w)}gc		and return ('DIE', '');
+	    m{\Gelse(?!\w)}gc		and return ('ELSE', '');
+	    m{\Gelsif(?!\w)}gc		and return ('ELSIF', '');
+	    m{\Gfalse(?!\w)}gc		and return ('LITERAL', 'FALSE');
+	    m{\Gfinish(?!\w)}gc		and return ('FINISH', 'FINISH');
+	    m{\Gfor(?!\w)}gc		and return ('FOR', '');
+	    m{\Gforeach(?!\w)}gc	and return ('FOREACH', '');
+	    m{\Gfunction(?!\w)}gc	and return ('FUNCTION', 'FUNCTION');
+	    m{\Gglobal(?!\w)}gc		and return ('VAR', 'GLOB_VAR');
+	    m{\Ginclude(?!\w)}gc	and return ('INCLUDE', '');
+	    m{\Gif(?!\w)}gc		and return ('IF', '');
+	    m{\Ginit(?!\w)}gc		and return ('INIT', 'INIT');
+	    m{\Glast(?!\w)}gc		and return ('LAST', '');
+	    m{\Gmax(?!\w)}gc		and return ('MINMAX', 'max');
+	    m{\Gmin(?!\w)}gc		and return ('MINMAX', 'min');
+	    m{\Gmethod(?!\w)}gc		and return ('FUNCTION', 'METHOD');
+	    m{\Gmy(?!\w)}gc		and return ('MY', '');
+	    m{\Gnext(?!\w)}gc		and return ('NEXT', '');
+	    m{\Gnot(?!\w)}gc		and return ('NOTOP', '');
+	    m{\Gnull(?!\w)}gc		and return ('LITERAL', 'NULL');
+	    m{\Gor(?!\w)}gc		and return ('OROP', '');
+	    m{\Gover(?!\w)}gc		and return ('ACROSS', '');
+	    m{\Gparam(?!\w)}gc		and return ('VAR', 'PARAM_VAR');
+	    m{\Gpackage(?!\w)}gc	and return ('PACKAGE', '');
+	    m{\Gperl(?!\w)}gc		and return ('PERL', '');
+	    m{\Gprint(?!\w)}gc		and return ('PRINT', 'print');
+	    m{\Gprintln(?!\w)}gc	and return ('PRINT', 'println');
+	    m{\Greturn(?!\w)}gc		and return ('RETURN', '');
+	    m{\Grun(?!\w)}gc		and return ('RUN', '');
+	    m{\Gstep(?!\w)}gc		and return ('STEP', 'STEP');
+	    m{\Gstruct(?!\w)}gc		and return ('STRUCT', 'STRUCT');
+	    m{\Gtrue(?!\w)}gc		and return ('LITERAL', 'TRUE');
+	    m{\Gunit(?!\w)}gc		and return ('UNIT', '');
+	    m{\Gunless(?!\w)}gc		and return ('UNLESS', '');
+	    m{\Guntil(?!\w)}gc		and return ('UNTIL', '');
+	    m{\Guse(?!\w)}gc		and return ('USE', '');
+	    m{\Gvar(?!\w)}gc		and return ('VAR', 'DYN_VAR');
+	    m{\Gwarn(?!\w)}gc		and return ('WARN', '');
+	    m{\Gwhile(?!\w)}gc		and return ('WHILE', '');
+	    m{\Gxor(?!\w)}gc		and return ('XOROP', '');
+	    
+	    }
+	    
+	    # Otherwise, any alphanumeric sequence is a function
+	    # (i.e. sin, push, etc.) if followed by a parenthesis, and a
+	    # bareword otherwise.
+	    
+	    if ( m{\G(\w(?<![\d])(\w|::)*(?=\s*\())}gc )
+	    {
+	    	return ($cond eq 'var' ? 'WORD' : 'FUNC', $1);
+	    }
+	    
+	    elsif ( m{\G(\w(?<!\d)\w*)}gc )
+	    {
+	        return ('WORD', $1);
+	    }
+	    
+	    # Now check for numeric, string and flow literals
+	    # NEEDED: INTERPOLATION, MULTILINE
+	    
+	    m{\G((?:\d+\.\d*|\d*\.\d+|\d+)(?:[eE]-?\d+)?)(?!\.)}gc 
+	        and return ('NUM', $1);
+	    
+	    m{\G(\d+)}gc and return ('NUM', $1);
+	    
+	    m{\G'((?:[^\\']|\\.)*)'}gc		and return ('STRS', $1);
+	    m{\G"((?:[^\\"]|\\.)*)"}gc		and return ('STRQ', $1);
+	    
+	    m{\G:([A-Z]+):}gc			and return ('PVAR', $1);
+	    	    	    
+	    # Now, all of the punctuation
+	    
+	    m{\G==>}gc				and return ('FLOWRIGHT', '');
+	    m{\G<==}gc				and return ('FLOWLEFT', '');
+	    m{\G\.\.\.}gc			and return ('YADAYADA', '');
+	    m{\G\.\.}gc				and return ('DOTDOT', '');
+	    m{\G=>}gc				and return ('=>', '');
+	    m{\G,}gc				and return (',', ',');
+	    m{\G\|\|}gc				and return ('OROR', '');
+	    m{\G\/\/}gc				and return ('DORDOR', '');
+	    m{\G&&}gc				and return ('ANDAND', '');
+	    m{\G(=~|!~)}gc			and return ('MATCHOP', $1);
+	    m{\G~}gc				and return ('CONCAT', '~');
+	    m{\G(==|!=|<=>|eq|ne|cmp)}gc	and return ('RELOP', $1);
+	    m{\G(<=|>=|lt|gt|le|ge)}gc		and return ('RELOP', $1);
+	    m{\G(<|>)}gc			and return ('RELOP', $1);
+	    m{\G([-+\*\/\^|]=|%%=|^=|&&=|\|\|=)}gc and return ('ASSIGNOP', $1);
+	    m{\G:=}gc				and return ('BINDOP', ':=');
+	    m{\G(\+\+|--)}gc			and return ('INCOP', $1);
+	    m{\G->}gc				and return ('ARROW', $1);
+	    m{\G\^}gc				and return ('POWOP', '^');
+	    m{\G%%}gc				and return ('MULOP', $1);
+	    m{\G([\*\/])}gc			and return ('MULOP', $1);
+	    m{\G([+-])}gc			and return ('ADDOP', $1);
+	    m{\G\\}gc				and return ('REFGEN', $1);
+	    m{\G!}gc				and return ('NOT2', $1);
+	    
+	    # Miscellaneous characters
+	    
+	    if ( m{\G([\$\@\%])}gc )
+	    {
+		$self->{my_lex_condition} = 'var';
+		return ($1, $1);
+	    }
+	    
+	    elsif ( m{\G\.}gc )
+	    {
+	        $self->{my_lex_condition} = 'fld';
+	    	return ('DOT', '');
+	    }
+	    
+	    elsif ( m{\G([:;=~()\[\]\{\}\$\@\%\&])}gc )
+	    {
+	    	return ($1, $1);
+	    }
+	    
+	    # If we get here and the current line is not empty, then we've got
+	    # an unrecognized character.
+	    
+	    elsif ( m{\G(\S)}gc ) {
+		$self->gen_error("unrecognized character '$1'");
+	    }
+	    
+	    else {
+		die "Strange lexer error at $self->{my_filename} line $self->{my_line}.\n";
+	    }
+	}
+    }
+    
+    return ('', undef);
+}
+
+# my_lex_wrapper ( ) 
+# 
+# This function is used for debugging only.  It serves as a wrapper around
+# my_lexer, printing out each token and value as they are found.
+
+sub my_lex_wrapper {
+    my $parser = shift;
+    my ($token, $value);
+    ($token, $value) = &my_lexer($parser);
+    if (ref $value)
+    {
+	print "FOUND ($parser->{my_line}) $token '$value->{attr}'\n";
+    }
+    else
+    {
+	print "FOUND ($parser->{my_line}) $token '$value'\n";
+    }
+    return ($token, $value);
+}

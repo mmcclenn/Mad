@@ -1,0 +1,131 @@
+#!/usr/local/bin/perl
+#
+# Mad is a dynamic systems simulation language, which is compiled by first
+# translating to C++.
+# 
+# The syntax of the Mad language is inspired by Perl and C++.
+# 
+
+use strict;
+use warnings;
+use Getopt::Std;
+
+use Mad::Model;
+
+# Usage: madcc [-e|-t] [-I] [-J]
+#              [-o outfile] infile...
+# 
+# Options:
+# 
+# -t		Print the parse tree and stop
+# 
+# -e		Generate intermediate code, but do not compile it
+# 
+# -J		Print debugging messages
+# 
+# -o <outfile>  Generate an executable file with the given name.  If this option
+#		is not specified, the executable file will be called a.out.
+
+our($opt_e, $opt_t, $opt_I, $opt_J, $opt_p, $opt_o);
+
+# Start by processing options.
+
+getopts('etIJo:');
+
+our($DEBUG_LEVEL) = 0;
+our($INT_ONLY);
+our($PRINT_TREE);
+our($INTERMEDIATE, $EXECUTABLE);
+our($IMPLICIT_INDEX);
+our($GCC_OPTS);
+
+# If -J is specified, print debugging messages.
+
+$DEBUG_LEVEL = 1 if defined $opt_J;
+
+# If -I is specified, generate implicit index loops
+
+#$IMPLICIT_INDEX = 1 if defined $opt_I;
+
+# If -t is specified, we should print out the parse tree of the input code and
+# stop.
+
+$PRINT_TREE = 1 if defined $opt_t;
+
+# If -e is specified, we should generate intermediate (C++) code and stop.
+
+$INT_ONLY = 1 if defined $opt_e;
+
+# If -o is specified, it sets the filename to which the generated code is
+# written.
+
+if ( defined $opt_o )
+{
+    $EXECUTABLE = $opt_o;
+    $INTERMEDIATE = "$opt_o.cc";
+}
+
+else
+{
+    $EXECUTABLE = "a.out";
+    $INTERMEDIATE = "a.cc";
+}
+
+
+# Declare a model object that will hold the compiled Mad code and variables.
+
+my $model = new Mad::Model;
+
+
+# Now take input from each file in turn and use that to build the model.
+
+while (@ARGV > 0) {
+    $model->load_mad(shift @ARGV);
+    $model->print_tree() if $PRINT_TREE;
+    last if $model->error_count > 0;
+}
+
+# If any errors occurred in parsing, we stop immediately.
+
+if ( (my $errcount = $model->error_count) > 0 ) {
+    print STDERR "Found $errcount errors.\n";
+    exit(4);
+}
+
+# Otherwise, if we were directed to print the parse tree(s) we stop now and do
+# nothing else.
+
+elsif ( $PRINT_TREE )
+{
+    exit(0);
+}
+
+# Otherwise, we go on to the next step which is to generate intermediate
+# code.  This gets placed into the file indicated by $INTERMEDIATE.
+
+$model->generate_target_code('cc', $INTERMEDIATE);
+
+
+# If errors occurred, stop now.  Clean up the intermediate file unless -e was
+# specified.
+
+if ( $model->{status} ne 'READY' )
+{
+    unlink($INTERMEDIATE) unless $INT_ONLY;
+    exit(4);
+}
+
+
+# If no errors occurred but -e was specified, stop now and leave the
+# intermediate file in place.
+
+elsif ( $INT_ONLY )
+{
+    exit(0);
+}
+
+
+# Now we get to the final step: compile the intermediate code.
+
+`gcc -o $GCC_OPTS $EXECUTABLE $INTERMEDIATE`;
+

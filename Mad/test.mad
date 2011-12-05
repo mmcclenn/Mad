@@ -1,0 +1,28 @@
+
+
+across [%veg_types] {
+
+     var $live_froot = pool;
+     var $live_croot = pool;
+
+}
+
+$root_absorption = allocator { weight: $live_froot };
+
+
+
+$total_stem_N = sum($stem_N);
+
+$soil_mineral_N ( allocator { weight: $live_froot, fraction: 0.5 } ) ==> $absorbed_N;
+
+reservoir $c { capacity ==> 100 };
+
+
+$solar_flux ( allocator { priority: $canopy_height, take: $plai * 0.833 } )
+                ==> $rad_avail_photo;
+
+
+$a ==> $c (50);
+$c ==> $o (40);
+overflow: $c ==> $f;
+

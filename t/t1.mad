@@ -1,0 +1,18 @@
+# Mad test suite
+# test 1: scalar variables and expressions
+
+int a = 1, b = 2, c = 3;
+
+int d = a + b * c;
+
+num e = b * a++;
+
+num f, g;
+
+f = 5 - a;
+
+print "a = $a\n";
+print "b = $b\nc = $c\n";
+print "d = " ~ $d ~ "\n";
+print 'e = $e\n';
+print 'e = ' ~ $e ~ "\n";

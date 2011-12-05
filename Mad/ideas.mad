@@ -1,0 +1,133 @@
+
+int &a, &b;
+a=b;
+*a=*b;
+
+int a, b;
+a := b;
+a = b;
+
+int &&a, &&b;
+a=b;
+*a=*b;
+**a=**b;
+
+class int_indirect {
+    int v := NULL;
+}
+
+int_indirect a, b;
+
+a := b;
+a.v := b.v;
+a.v = b.v
+
+class Node {
+    string key = $1;
+    general @content = $2;
+    Node left := NULL;
+    Node right := NULL;
+}
+
+Node my_tree := NULL;
+
+add_node(my_tree, "AAA", (2, 3));
+
+
+add_node ( Node &$root, string key, general @values ) : flag
+{
+    my Node $new_node ($key, @values);
+    
+    if ( null $root )
+    {
+	$root := $new_node;
+	my $num_values = @values.length;
+	print "added node: $key with $num_value values\n";
+	return true;
+    }
+    elsif ( $key eq $root.key )
+    {
+        return false;
+    }
+    elsif ( $key lt $root.key )
+    {
+        return add_node($root.left, $key, @values);
+    }
+    else
+    {
+	return add_node($root.right, $key, @values);
+    }
+} 
+
+string %veg_types = ("ENF", "DCF");
+
+add_node ( Node &root, string key, general @values ) : flag
+{
+    my Node new_node (key, @values);
+    
+    if ( null root )
+    {
+	root := new_node;
+	
+	my num_values = @values.length;
+	print "added node: $key with $num_values values\n";
+	
+	return true;
+    }
+    
+    elsif ( key eq root.key )
+    {
+        return false;
+    }
+    
+    elsif ( key lt root.key )
+    {
+        return add_node(root.left, key, @values);
+    }
+    
+    else
+    {
+	return add_node(root.right, key, @values);
+    }
+}
+
+
+{{atmosphere}} ===> C_pool (npp);
+
+%a = ("abc", "def", "ghi");
+
+%a += "jkl";
+
+%a -= $r
+
+
+%f = %a + ("q", "z");
+
+%a *= $i
+
+int @foo[];
+@foo[2] = (3, 4);
+@foo[5] = (3, 6);
+
+gen %foo[%sym];
+
+int &foo;
+
+
+general $syminfo[%sym][%typefields];
+
+$syminfo[$name][type] = 'int';
+
+
+$foo[2] = 3
+$foo[4] = 5
+
+foreach $n ( %$foo )
+{
+
+
+}
+
+int @@foo;
+
+ 

@@ -1,0 +1,12 @@
+# ignore the following
+Mad/Parser.pm
+# ignore emacs backup files
+*~
+# ignore objects and archives
+*.[oa]
+# ignore grammar output files
+*.output
+# ignore output files from Mad compiler
+*-mpc.pl
+# ignore .DS_store
+*.DS_Store
